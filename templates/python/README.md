@@ -1,0 +1,1 @@
+This is a python project template written in Cookiecutter.
