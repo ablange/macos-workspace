@@ -1,33 +1,51 @@
-# macOS workspace
-Bash script for automatically configuring macOS for Python development.
+# macOS workspace: The definitive guide to running Python on macOS
+Turn your macOS into a Python Powerhouse using the macOS-workspace build system written in Bash.
 
-## Preface
+
 > _“Give me six hours to chop down a tree, and I will spend the first four sharpening the axe.”_
 — Abraham Lincoln
 
-Configuring a machine for software development is tedious at best, and an emotional roller coaster at worst.
-After purchasing a new Apple MBP 13" M3 Pro and spending a few hours setting everything up how I like it,
-I decided to automate the setup and document the rationale behind certain decisions made along the way.
+ 
+# Preface
+Honest Abe understood the correlation between tools and productivity. 
+Sure, you could chop that tree with a steak knife, just don't forget a flashlight for when it gets dark! 
+Abe understood how blades work and decided to optimize for sharpness, ultimately leading to faster success.
 
-My hope is others will enjoy and maybe even use the project for some or all of their workstation.
 
-## Introduction
-In this post, we'll learn how to configure a macOS user account for Python development, 
-with an emphasis on boosting productivity and accelerating context switching.
-We'll explain how to connect to GitHub and run the initial setup script using your terminal.
-From there, we'll use Makefile commands to build a Python environment locally.
-Finally, we'll install an IDE and debug a Python process.
+# Introduction
+Setting up a new machine for Python development can feel like navigating a labyrinth. 
+Between choosing tools and managing dependencies, the process can be time-consuming and frustrating, 
+especially when all you want to do is write code, not sift through documentation. 
+This is where DevOps automation can be a game-changer.
 
-At the end of this post, you'll gain a detailed understanding of how to write, run, debug, & test
-Python locally on any macOS machine in just a few minutes.
+In this post, we'll introduce the macos-workspace project a local build system 
+written in Bash designed to streamline the Python installation process 
+and simplify virtual environment management--all neatly wrapped in a custom shell prompt interface 
+intended to boost productivity and accelerate context switching. 
+By fully automating the setup, we eliminate the manual hassle and free you up to write code.
 
-## Table of Contents
-1. Why macOS?
-2. Automated setup script
-3. Python project scaffolding
-4. Python debugger in IDE
+During the post, we will discuss the rationale at each layer in the workspace. 
+Then we will explain the installation process step-by-step. 
+Finally, we will initialize a Python project locally. 
+By the end of this post, you'll be able to seamlessly write, run, 
+and debug multiple Python projects on macOS machine with ease.
 
-## Why macOS?
+
+# Layers
+Let's define each layer in our workspace, and elaborate on what will be installed and why certain tools were chosen.
+a. Operating System: Why macOS over Windows for development?
+b. Shell: Why Bash over Zsh? 
+c. Package Manager: Why Nix over Homebrew? Discuss dependency management.
+d. Python Environment Manager: Why Pyenv and Pyenv-Virtualenv over Virtualenv and Conda? 
+   Discuss managing multiple Python versions and virtual environments effortlessly. 
+   Explain how template will "compile requirements" using options. 
+   Explore possibility of generating new Python project in Docker container as opposed to venv only.
+e. IDE, Tools and Services: 
+   Explain how to configure IDE to debug Python. 
+   Explain Rectangle, and other productivity tools.
+
+
+## Operating System
 It is important to choose an operating system that improves your computing experience.
 Let's evaluate the most popular OS choices for Apple hardware:
 
@@ -54,64 +72,24 @@ I prefer macOS because of the superior user experience and native Unix-like expe
 > [macOS] is representative of the BSD strain of free Unix-like systems._" <sup>1</sup>
 — O’Reilly, _Unix in a Nutshell_ 
 
-TODO: Install rectangle; Install iTerm?
 
-
-## Automated setup script
-
-### Git SSH key
-Before I can do anything else, I need to create my Git SSH key
-
+## Shell
 ```shell
-# Install XCode developer tools. 
-xcode-select --install
-# Create private/public key pair
-ssh-keygen -t ed25519 -C "yourEmail@site.com"
-# Copy public key to clipboard
-pbcopy < /.ssh/{YOUR_PUBLIC_KEY_FILE}.pub
-# Paste public key into GitHub account here:
-# https://github.com/settings/keys
+brew install pyenv-virtualenv
+#  Add pyenv virtualenv-init to your shell to enable auto-activation of virtualenvs
+eval "$(pyenv virtualenv-init -)"
 ```
 
 
-### Run script
-```shell
-# Clone into repos/
-git clone https://github.com/ablange/macos-workstation
-cd ~/repos/macos-workstation
-make setup
-```
-
-This automatically installs and configures the following:
-- Shell
-- Git
-- Homebrew
-- Python core
-
-
-### Shell
-Let's create a `.bash_profile` file in our home directory to customize
-our terminal prompt to look like this:
-```
-(yourUser@yourMachine)(YourVirtualEnv)(your/working/dir/)(your-git-branch)
-$ echo 'is this thing on?'
-```
-TODO: Finish bash shell config.
-TODO: Create bash/git aliases.
-
-
-### Git
-TODO: Set git global settings.
-TODO: Figure out git autocomplete and branch display in terminal prompt.
-
-
-### Python Core
+## Package Manager
 [Homebrew](https://brew.sh/) is by far the best macOS packager 
 for its simplicity and frequent patches.
 ```shell
 /bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)"
 ```
 
+
+## Python Environment Manager
 [pyenv](https://github.com/pyenv/pyenv) is an incredible tool 
 that makes it really easy to install and manage 
 multiple Python versions on your machine.
@@ -127,14 +105,40 @@ brew install pyenv-virtualenv
 eval "$(pyenv virtualenv-init -)"
 ```
 
-Thank you for reading! 
-In a future post, we'll explore more advanced Python projects that use this template like Airflow.
 
-## Python project scaffolding
-TODO: Use temple python to install a project.
+## IDE, Tools & Services
+TODO
 
-## Python debugger in IDE
-TODO: Maybe user VSCode to setup debugger?
 
-## Citations
+# Getting Started
+## Git SSH key
+Before I can do anything else, I need to create my Git SSH key
+
+```shell
+# Install XCode developer tools. 
+xcode-select --install
+# Create private/public key pair
+ssh-keygen -t ed25519 -C "yourEmail@site.com"
+# Copy public key to clipboard
+pbcopy < /.ssh/{YOUR_PUBLIC_KEY_FILE}.pub
+# Paste public key into GitHub account here:
+# https://github.com/settings/keys
+```
+
+
+## Install the workspace
+```shell
+# Clone into repos/
+git clone https://github.com/ablange/macos-workstation
+cd ~/repos/macos-workstation
+make install  # one-time installation
+make setup    # start your workspace!
+```
+
+
+# Python project template
+TODO 
+
+
+# Citations
 [1]: Robbins, A. (2005). _Unix in a nutshell_, 4th edition. O’Reilly.
