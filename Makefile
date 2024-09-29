@@ -37,7 +37,7 @@ help:
 
 
 .PHONY: setup
-setup: os_dependencies git shell
+setup: os_dependencies git shell python_core
 	echo 'building your workspace ... '
 
 
@@ -52,7 +52,8 @@ os_dependencies:
 			zlib     \
 			tcl-tk   \
 			wget   \
-			docker
+			docker \
+			copier
 
 
 .PHONY: git
@@ -74,17 +75,23 @@ shell:
 
 
 .PHONY: python_core
-python:
+python_core:
 	echo 'installing Python core ... '
 	brew install \
 			pyenv \
 			pyenv-virtualenv
 	pyenv install \
 			3.11.9 \
-			3.10.14 \
-			3.9.19
+			3.10.14
 	pyenv global 3.11.9
 	mkdir -p ~/repos/
+
+
+PROJECT_NAME = default_project_name
+.PHONY: python
+python:
+	echo 'initializing Python project using template ... '
+	copier copy ~/repos/macos-workspace/templates/python/ ~/repos/$(PROJECT_NAME)
 
 
 # TODO: duckdb
