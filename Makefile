@@ -8,11 +8,26 @@ help:
 	\n   python: install your Python core \
 	"
 
+
 .PHONY: setup
 setup:
 	echo 'building your workspace ... '
-	chmod +x ./setup.sh
-	./setup.sh
+	os_dependencies
+
+
+.PHONY: os_dependencies
+os_dependencies:
+	echo 'installing OS dependencies ...'
+	brew install \
+			openssl  \
+			readline \
+			sqlite3  \
+			xz       \
+			zlib     \
+			tcl-tk   \
+			wget   \
+			docker
+
 
 .PHONY: shell
 shell:
@@ -21,3 +36,20 @@ shell:
 	cp -rf dotfiles/.bash_profile ~/.bash_profile
 	cp -rf dotfiles/.bashrc ~/.bashrc
 	source ~/.bashrc
+
+
+# shell
+# 	bash prompt
+# 	bash aliases
+# git
+# 	git config
+# 	git command autocomplete
+# 	git branch name autocomplete
+# python
+# 	pyenv
+# 	pyenv-virtualenv
+# 	install 3.11 globally
+# 	install 3.9-3.10 for projects
+# duckdb
+# airflow
+# jupyter
