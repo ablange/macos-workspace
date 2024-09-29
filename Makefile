@@ -1,8 +1,24 @@
-# Makefile for workflows
-
-# Print usage of main targets when user types "make" or "make help"
+# 		macos-workspace
+#		~~~~~~~~~~~~~~~
+# 		Makefile for ``macos-workspace`` build system.
+# 		Each template provides a suite of tools used
+# 		at some point in the data development life cycle.
+#
 help:
-	@echo -e "Please choose one of the following targets:\
+	@echo -e "\
+	\n  _ __ ___   __ _  ___ ___  ___                       \
+	\n | _  _ \ / _ |/ __/ _ \/ __|__                    \
+	\n | | | | | | (_| | (_| (_) \__ \__                    \
+	\n |_| |_| |_|\___|\___\___/|___/                      \
+	\n __      __  ___  _ __| | _____ _ __   __ _  ___ ___  \
+	\n \ \ /\ / / / _ \| __| |/ / __| _ \ / _ |/ __/ _ \ \
+	\n  \ V  V / | (_) | |  |   <\__ \ |_) | (_| | (_|  __/ \
+	\n   \_/\_/   \___/|_|  |_|\_\___/ .__/ \__,_|\___\___| \
+	\n                                                      \
+	\n Please choose a template:\
+	\n\
+    \n   $ make <TEMPLATE> \
+    \n\
 	\n   setup: build your workspace \
 	\n   shell: build your shell prompt \
 	\n   python: install your Python core \
@@ -14,8 +30,6 @@ setup: os_dependencies git shell
 	echo 'building your workspace ... '
 
 
-
-# 0: OS dependencies
 .PHONY: os_dependencies
 os_dependencies:
 	echo 'installing OS dependencies ...'
@@ -29,7 +43,7 @@ os_dependencies:
 			wget   \
 			docker
 
-# 1: Shell
+
 .PHONY: shell
 shell:
 	echo 'building your shell ... '
@@ -38,7 +52,7 @@ shell:
 	cp -rf dotfiles/.bash_profile ~/.bash_profile
 	source ~/.bashrc
 
-# 2. Git
+
 .PHONY: git
 git:
 	echo 'configuring Git command line completion... '
@@ -48,9 +62,6 @@ git:
 		https://raw.githubusercontent.com/git/git/master/contrib/completion/git-prompt.sh
 
 
-# 	2a. git command autocomplete
-# 	2b. git branch name autocomplete
-# 	2c. git config ``name`` & ``email``
 # 3: Python
 # 	pyenv
 # 	pyenv-virtualenv
