@@ -17,11 +17,21 @@ help:
 	\n                                                      \
 	\n Please choose a template:\
 	\n\
+	\n   1- python \
+	\n   2- [TBD] jupyter \
+	\n   3- [TBD] duckdb \
+	\n   4- [TBD] airflow \
+	\n\
     \n   $ make <TEMPLATE> \
+    \n   e.g., $ make python \
     \n\
-	\n   setup: build your workspace \
-	\n   shell: build your shell prompt \
-	\n   python: install your Python core \
+	\n   setup: build macOS workspace \
+	\n   shell: initialize bash shell \
+	\n   python_core: install Python core dependencies \
+	\n   python: initialize new Python project \
+	\n   [TBD] jupyter: initialize new Jupyter notebook and access via web browser \
+	\n   [TBD] duckdb: initialize new DuckDB database server in a Docker container \
+	\n   [TBD] airflow: initialize new Airflow scheduler in a Docker container and access via web browser \
 	"
 
 
@@ -62,11 +72,20 @@ git:
 		https://raw.githubusercontent.com/git/git/master/contrib/completion/git-prompt.sh
 
 
-# 3: Python
-# 	pyenv
-# 	pyenv-virtualenv
-# 	install 3.11 globally
-# 	install 3.9-3.10 for projects
-# duckdb
-# airflow
-# jupyter
+.PHONY: python_core
+python:
+	echo 'installing Python core ... '
+	brew install \
+			pyenv \
+			pyenv-virtualenv
+	pyenv install \
+			3.11.9 \
+			3.10.14 \
+			3.9.19
+	pyenv global 3.11.9
+	mkdir -p ~/repos/
+
+
+# TODO: duckdb
+# TODO: airflow
+# TODO: jupyter
