@@ -10,9 +10,10 @@ help:
 
 
 .PHONY: setup
-setup:
+setup: os_dependencies git shell
 	echo 'building your workspace ... '
-	os_dependencies
+
+
 
 # 0: OS dependencies
 .PHONY: os_dependencies
@@ -37,9 +38,16 @@ shell:
 	cp -rf dotfiles/.bash_profile ~/.bash_profile
 	source ~/.bashrc
 
-
-# 1. Shell
 # 2. Git
+.PHONY: git
+git:
+	echo 'configuring Git command line completion... '
+	curl -o ~/.git-completion.bash \
+ 		https://raw.githubusercontent.com/git/git/master/contrib/completion/git-completion.bash
+	curl -o ~/.git-prompt.sh \
+		https://raw.githubusercontent.com/git/git/master/contrib/completion/git-prompt.sh
+
+
 # 	2a. git command autocomplete
 # 	2b. git branch name autocomplete
 # 	2c. git config ``name`` & ``email``
