@@ -54,15 +54,6 @@ os_dependencies:
 			docker
 
 
-.PHONY: shell
-shell:
-	echo 'building your shell ... '
-	cp -rf dotfiles/.bashrc ~/.bashrc
-	cp -rf dotfiles/.bash_aliases ~/.bash_aliases
-	cp -rf dotfiles/.bash_profile ~/.bash_profile
-	source ~/.bashrc
-
-
 .PHONY: git
 git:
 	echo 'configuring Git command line completion... '
@@ -70,6 +61,15 @@ git:
  		https://raw.githubusercontent.com/git/git/master/contrib/completion/git-completion.bash
 	curl -o ~/.git-prompt.sh \
 		https://raw.githubusercontent.com/git/git/master/contrib/completion/git-prompt.sh
+
+
+.PHONY: shell
+shell:
+	echo 'building your shell ... '
+	cp -rf dotfiles/.bashrc ~/.bashrc
+	cp -rf dotfiles/.bash_aliases ~/.bash_aliases
+	cp -rf dotfiles/.bash_profile ~/.bash_profile
+	source ~/.bashrc
 
 
 .PHONY: python_core
