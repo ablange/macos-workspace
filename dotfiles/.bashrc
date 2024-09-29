@@ -1,9 +1,18 @@
-# pyenv
+# 1: Shell
+PROMPT_COMMAND='PS1_CMD1=$(__git_ps1 " (%s)"); PS1_CMD2=$(pyenv version-name)'; PS1='\[\e[34m\][\u\[\e[34m\]@\[\e[34m\]\h\[\e[34m\]]\[\e[0m\] \[\e[96m\](\[\e[96m\]\w\[\e[96m\])\[\e[91m\]${PS1_CMD1}\[\e[0m\] \[\e[92m\](${PS1_CMD2})\n\[\e[0m\]\$ '
+source ~/.bash_aliases
+
+# 2: Git
+source ~/.git-prompt.sh
+source ~/.git-completion.bash
+
+# 3: Python
+# 3a: pyenv
 export PYENV_ROOT="$HOME/.pyenv"
 command -v pyenv >/dev/null || export PATH="$PYENV_ROOT/bin:$PATH"
 eval "$(pyenv init -)"
 
-# pyenv-virtualenv
+# 3b: pyenv-virtualenv
 function cd() {
   builtin cd "$@"
 
@@ -22,13 +31,3 @@ function cd() {
       fi
   fi
 }
-
-# git
-source ~/.git-completion.bash
-source ~/.git-prompt.sh
-
-# bash prompt
-PROMPT_COMMAND='PS1_CMD1=$(__git_ps1 " (%s)"); PS1_CMD2=$(pyenv version-name)'; PS1='\[\e[34m\][\u\[\e[34m\]@\[\e[34m\]\h\[\e[34m\]]\[\e[0m\] \[\e[96m\](\[\e[96m\]\w\[\e[96m\])\[\e[91m\]${PS1_CMD1}\[\e[0m\] \[\e[92m\](${PS1_CMD2})\n\[\e[0m\]\$ '
-
-# bash aliases
-source ~/.bash_aliases
