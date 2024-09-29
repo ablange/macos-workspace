@@ -11,6 +11,8 @@ help:
 .PHONY: setup
 setup:
 	echo 'building your workspace ... '
+	chmod +x ./setup.sh
+	./setup.sh
 
 .PHONY: shell
 shell:
