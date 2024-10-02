@@ -1,43 +1,42 @@
 # macos-workspace
-# Getting Started
+Build system written in Bash designed to streamline development on macOS.
+
+
 ## Prerequisites
-Here is a list of prerequisites
-we need to install on macOS
-before we can begin building our workspace.
-##### 1: Core macOS developer utilities
+1. Core macOS developer utilities
 ```commandline
 xcode-select --install
 ```
 
-
-##### 2: Change your default macOS shell to bash
+2. Change your default macOS shell to bash
 ```commandline
 chsh -s /bin/bash
 ```
 
-
-##### 3: Homebrew package manager
+3. Homebrew package manager
 ```commandline
-/bin/bash -c "$(curl -fsSL \ https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)"
+/bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)"
 ```
 
-
-##### 4: Install GitHub CLI
+4. Install GitHub CLI
 ```commandline
 brew install gh
 gh auth
 ```
 
-
 ## Installation
-Clone into ``repos/`` and run ``make setup`` command.
+Create ``repos/`` directory and clone ``macos-workspace`` into it.
 ```commandline
 (mkdir -p ~/repos/
-cd ~/repos/
-gh repo clone ablange/macos-workspace
-cd ~/macos-workspace/
-make setup)
+gh repo clone ablange/macos-workspace ~/docs/macos-workspace)
 ```
+
+Build your workspace. 
+```commandline
+cd ~/macos-workspace/
+make setup
+```
+
 
 Restart shell for changes to take effect.
 ```commandline
@@ -45,18 +44,52 @@ exec bash
 ```
 
 
-# Templates
-List templates available to build.
-```commandline
-cd ~/repos/macos-workspace/
-make
-```
+## Usage
+To get started using your workspace, build the projects you need inside ``repos/``
+and use them interdependently as needed.
 
-## Python
-Build a Python 3.11.9 project
+For example, you can write a ``python`` package
+that import into your ``notebook``
+and use to transform data stored in ``duckdb`` database.
+Finally, you can schedule an ``airflow`` DAG
+to run once a month to refresh.
+
+Here is a list of templates available to build inside ``macos-workspace``.
+* python
+* duckdb
+* jupyter
+* airflow
+
+
+### Python
+Let's walk through building a Python 3.11.9 project called ``foo``.
 ```commandline
 make python project=foo version=3.11.9
 ```
-Now whenever you ``cd`` into ``~/repos/foo/``,
-your virtual environment is automatically 
-changed accordingly.
+
+After you complete questionnaire, a project directory will be created in ``repos/``.
+
+Setup your Python project development environment.
+```commandline
+cd ~/repos/foo
+make setup
+```
+Now when you cd into ``foo/`` your development environment is automatically activated.
+
+Finally, push your new project to GitHub and start working on a new branch. 
+
+Change into your new project directory and push to GitHub.
+```commandline
+git init
+git push origin main
+git checkout -B feature
+```
+
+### DuckDB
+TODO
+
+### Jupyter
+TODO
+
+### Airflow
+TODO
