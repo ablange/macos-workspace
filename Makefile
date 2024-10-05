@@ -87,13 +87,14 @@ python_core:
 	mkdir -p ~/repos/
 
 
-PROJECT_NAME = default_project_name
+project_name = default_project_name
 .PHONY: python
 python:
 	echo 'initializing Python project using template ... '
-	copier copy ~/repos/macos-workspace/templates/python/ ~/repos/$(PROJECT_NAME)
-	(cd ~/repos/some_project; git init)
-	echo 'Done! cd into ~/repos/$(PROJECT_NAME) to get started!'
+	copier copy ~/repos/macos-workspace/templates/python/ ~/repos/$(project_name)
+	cd ~/repos/$(project_name)
+	git init
+	echo 'Done! cd into ~/repos/$(project_name) to get started!'
 
 
 # TODO: duckdb

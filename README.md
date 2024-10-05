@@ -24,6 +24,9 @@ brew install gh
 gh auth
 ```
 
+5. Install Docker Desktop:
+https://docs.docker.com/desktop/install/mac-install/
+    
 ## Installation
 Create ``repos/`` directory and clone ``macos-workspace`` into it.
 ```commandline
