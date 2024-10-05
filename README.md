@@ -88,7 +88,7 @@ Here is a list of templates available to build inside ``macos-workspace``.
 ### Python
 Let's walk through building a Python 3.11.9 project called ``some_project``.
 ```commandline
-
+cd ~/repos/macos-workspace/
 make python project_name=some_project
 ```
 
