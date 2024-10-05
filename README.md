@@ -2,41 +2,62 @@
 Build system written in Bash designed to streamline development on macOS.
 
 
+## Features
+- __Bash shell manager__
+  - Programmatically manage dotfiles (e.g., `.bashrc`) with version control.
+  - Build shell from scratch anytime with [Makefile](https://www.gnu.org/software/make/manual/make.html) commands.
+  - Customize Bash terminal prompt with [PS1](https://www.gnu.org/software/bash/manual/html_node/Controlling-the-Prompt.html).
+- __Data Product Development Templates__
+  - Rapidly prototype data products by initializing project templates with [copier](https://copier.readthedocs.io/en/stable/).
+  - All templates run in isolated Docker containers to ensure modularity.
+  - Templates provide specialized components designed 
+  to simplify software-related aspects data engineering.
+    - `Python`: Python 3.11 project with Pyenv virtual environment ontop of isolated Docker container.  
+    - __`Duckdb`__: Coming soon!   
+    - __`Jupyter`__: Coming soon!
+    - __`Airflow`__: Coming soon!
+
+
 ## Prerequisites
-1. Core macOS developer utilities
+
+> ⚠️ Requires macOS Sequoia 15.0> or later.
+
+1. Install Docker Desktop:
+https://docs.docker.com/desktop/install/mac-install/
+
+
+2. Install core macOS developer utilities:
 ```commandline
 xcode-select --install
 ```
 
-2. Change your default macOS shell to bash
+3. Change your default macOS shell from zsh to bash:
 ```commandline
 chsh -s /bin/bash
 ```
 
-3. Homebrew package manager
+4. Install Homebrew package manager:
 ```commandline
 /bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)"
 ```
 
-4. Install GitHub CLI
+5. Install GitHub CLI and authenticate.
 ```commandline
 brew install gh
 gh auth
 ```
 
-5. Install Docker Desktop:
-https://docs.docker.com/desktop/install/mac-install/
-    
+
 ## Installation
-Create ``repos/`` directory and clone ``macos-workspace`` into it.
+Clone ``macos-workspace`` into a new ``repos/`` directory.
 ```commandline
 (mkdir -p ~/repos/
-gh repo clone ablange/macos-workspace ~/docs/macos-workspace)
+gh repo clone ablange/macos-workspace ~/repos/macos-workspace)
 ```
 
 Build your workspace. 
 ```commandline
-cd ~/macos-workspace/
+cd ~/repos/macos-workspace/
 make setup
 ```
 
@@ -51,12 +72,6 @@ exec bash
 To get started using your workspace, build the projects you need inside ``repos/``
 and use them interdependently as needed.
 
-For example, you can write a ``python`` package
-that import into your ``notebook``
-and use to transform data stored in ``duckdb`` database.
-Finally, you can schedule an ``airflow`` DAG
-to run once a month to refresh.
-
 Here is a list of templates available to build inside ``macos-workspace``.
 * python
 * duckdb
@@ -67,6 +82,7 @@ Here is a list of templates available to build inside ``macos-workspace``.
 ### Python
 Let's walk through building a Python 3.11.9 project called ``foo``.
 ```commandline
+
 make python project=foo version=3.11.9
 ```
 
