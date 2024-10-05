@@ -83,8 +83,6 @@ and use them interdependently as needed.
 Here is a list of templates available to build inside ``macos-workspace``.
 * python
 * duckdb
-* jupyter
-* airflow
 
 
 ### Python
