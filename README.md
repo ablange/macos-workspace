@@ -88,17 +88,17 @@ Here is a list of templates available to build inside ``macos-workspace``.
 
 
 ### Python
-Let's walk through building a Python 3.11.9 project called ``foo``.
+Let's walk through building a Python 3.11.9 project called ``some_project``.
 ```commandline
 
-make python project=foo version=3.11.9
+make python project_name=some_project
 ```
 
 After you complete questionnaire, a project directory will be created in ``repos/``.
 
 Setup your Python project development environment.
 ```commandline
-cd ~/repos/foo
+cd ~/repos/some_project
 make setup
 ```
 Now when you cd into ``foo/`` your development environment is automatically activated.
@@ -112,11 +112,6 @@ git push origin main
 git checkout -B feature
 ```
 
+
 ### DuckDB
-TODO
-
-### Jupyter
-TODO
-
-### Airflow
 TODO
