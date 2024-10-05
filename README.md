@@ -28,7 +28,7 @@ Build system written in Bash designed to streamline development on macOS.
 
 ## Prerequisites
 
-> ⚠️ Requires macOS Sequoia 15.0> or later.
+> ⚠️Recommended macOS version is Sequoia 15.0> or later.
 
 1. Install Docker Desktop:
 https://docs.docker.com/desktop/install/mac-install/
