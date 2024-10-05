@@ -3,19 +3,27 @@ Build system written in Bash designed to streamline development on macOS.
 
 
 ## Features
-- __Bash shell manager__
-  - Programmatically manage dotfiles (e.g., `.bashrc`) with version control.
-  - Build shell from scratch anytime with [Makefile](https://www.gnu.org/software/make/manual/make.html) commands.
-  - Customize Bash terminal prompt with [PS1](https://www.gnu.org/software/bash/manual/html_node/Controlling-the-Prompt.html).
+- __Bash Shell Manager__
+  - Manage and rebuild Bash shell with [Makefile](https://www.gnu.org/software/make/manual/make.html) commands.
+  - Store dotfiles (e.g., `.bashrc`) in version control and backup or branch as needed.
+  - Reproduce 100% of terminal setup on any macOS machine.
+  - Custom [PS1](https://www.gnu.org/software/bash/manual/html_node/Controlling-the-Prompt.html)
+    terminal prompt with development context (e.g., path, git branch).
 - __Data Product Development Templates__
-  - Rapidly prototype data products by initializing project templates with [copier](https://copier.readthedocs.io/en/stable/).
-  - All templates run in isolated Docker containers to ensure modularity.
-  - Templates provide specialized components designed 
-  to simplify software-related aspects data engineering.
-    - `Python`: Python 3.11 project with Pyenv virtual environment ontop of isolated Docker container.  
+  - Rapidly prototype data products with a suite of [copier](https://copier.readthedocs.io/en/stable/) project templates.
+  - Handle software-related aspects of data projects so you can focus on the data itself.
+  - Ensure cross-platform compatibility and avoid dependency conflicts
+    by running each project in an isolated Docker container.
+  - Templates are interoperable so projects once initialized share
+    local network connectivity (e.g., database).
+  - Templates include...
+    - `Python`:
+      - Run Python 3.11 in a virtual environment with Pyenv and Docker.
+      - Manage Python and OS dependencies with Pdm.
+      - Lint, format, and style code on every commit with Ruf and Pre-commit.
+      - Generate documentation from code docstrings using Sphinx.
+      - Measure and enforce unit test coverage with pytest and coverage.
     - __`Duckdb`__: Coming soon!   
-    - __`Jupyter`__: Coming soon!
-    - __`Airflow`__: Coming soon!
 
 
 ## Prerequisites
