@@ -92,8 +92,7 @@ project_name = default_project_name
 python:
 	echo 'initializing Python project using template ... '
 	copier copy ~/repos/macos-workspace/templates/python/ ~/repos/$(project_name)
-	cd ~/repos/$(project_name)
-	git init
+	git -C ~/repos/$(project_name) init
 	echo 'Done! cd into ~/repos/$(project_name) to get started!'
 
 
