@@ -1,7 +1,11 @@
+# Initialize Docker container with Python3 base image.
 FROM python:3
-
 WORKDIR /repos/{{project_name}}
-
 COPY . /repos/{{project_name}}
 
+# Install OS packages
+RUN apt-get update
+RUN xargs -a packages.txt apt-get install -y
+
+# Run tail command so container stays alive
 CMD ["tail", "-f", "/dev/null"]
