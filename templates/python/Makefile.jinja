@@ -9,10 +9,11 @@ help:
     \n   - Run 'make clean' before 'make setup' to build a new Docker image.    \
     \n																			\
 	\n Example:																	\
-    \n   $ make <TEMPLATE> 														\
-    \n   e.g., $ make python 													\
+    \n   $ make <COMMAND> 														\
+    \n   e.g., $ make setup 													\
     \n																			\
     \n Commands:																\
+    \n   bash           Run interactive Bash shell inside Docker container		\
     \n   clean          delete local development environment    				\
     \n   dependencies   install Python and OS dependencies      				\
     \n   docs           generate Sphinx documentation from code 				\
@@ -56,3 +57,8 @@ clean:
 	docker stop {{project_name}}_container
 	docker container rm -f {{project_name}}_container
 	docker image rm -f {{project_name}}
+
+
+.PHONY: bash
+bash:
+	docker exec -it {{project_name}}_container sh
