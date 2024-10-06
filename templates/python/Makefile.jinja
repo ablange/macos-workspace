@@ -19,13 +19,13 @@ help:
 
 
 .PHONY: setup
-setup: docker
+setup: docker_init
 	echo 'initialize local development environment ... '
 
 
-.PHONY: docker
-docker:
-	echo 'building Docker image and running a new container ...'
+.PHONY: docker_init
+docker_init:
+	echo 'initializing Docker image and running a new container ...'
 	docker build -t {{project_name}} .
 	docker run -d --name {{project_name}}_container {{project_name}}
 
@@ -38,3 +38,11 @@ docker_start:
 .PHONY: docker_stop
 docker_stop:
 	docker stop {{project_name}}_container
+
+
+.PHONY: docker_clean
+docker_clean:
+    echo 'Stopping ...'
+    docker stop {{project_name}}_container
+    docker container rm -f {{project_name}}_container
+    docker image rm -f {{project_name}}
