@@ -1,7 +1,6 @@
 # Bash aliases
 alias ll='ls -a -A -l'
 
-
 # Git aliases
 git config --global alias.s status
 git config --global alias.com commit
