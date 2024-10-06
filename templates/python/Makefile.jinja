@@ -5,44 +5,59 @@
 #
 help:
 	@echo -e "\
-	\n Available commands: 									  \
-	\n													      \
-    \n   $ make <COMMAND> 									  \
-    \n   e.g., $ make setup    							      \
-    \n														  \
-	\n   setup: initialize local development environment      \
-	\n   docker: start a Docker container in the background   \
-	\n   dependencies: install Python and OS dependencies     \
-	\n   linter: start pre-commit hook with Ruf linter        \
-	\n   docs: generate Sphinx documentation from code        \
+	\n Makefile for ``{{project_name}}`` Python project.                        \												        \
+	\n 													                        \
+	\n Usage:                    											    \
+	\n  - Run ``make setup`` to build your development environment.             \
+	\n  - Run ``make dependencies`` to install new packages as needed.          \
+	\n  - Run ``make clean`` before ``make setup`` to build a new Docker image. \
+	\n													                        \
+	\n Example:													                \
+    \n   $ make <COMMAND> 									                    \
+    \n   e.g., $ make setup    							                        \
+    \n														                    \
+	\n Commands: 									                    \
+    \n   clean: delete Docker container                                         \
+	\n   dependencies: install Python and OS dependencies                       \
+	\n   docs: generate Sphinx documentation from code                          \
+    \n   lint: run linter manually                                              \
+    \n   precommit: enable pre-commit code linter                               \
+    \n   precommit_stop: disable pre-commit code linter                         \
+   	\n   setup: initialize local development environment                        \
+	\n   start: start Docker container                                          \
+	\n   stop: stop Docker container                                            \
+	\n   test: run tests and generate coverage report                           \
 	"
 
 
 .PHONY: setup
 setup: docker_init
-	echo 'initialize local development environment ... '
+	echo 'Initializing Python development environment ... '
 
 
+#==============================================================================
+# Docker
+#==============================================================================
 .PHONY: docker_init
 docker_init:
-	echo 'initializing Docker image and running a new container ...'
+	echo 'Initializing Docker container ...'
 	docker build -t {{project_name}} .
 	docker run -d --name {{project_name}}_container {{project_name}}
 
 
 .PHONY: docker_start
-docker_start:
+start:
 	docker start {{project_name}}_container
 
 
 .PHONY: docker_stop
-docker_stop:
+stop:
 	docker stop {{project_name}}_container
 
 
 .PHONY: docker_clean
 docker_clean:
-    echo 'Stopping ...'
+    echo 'Deleting Docker container ...'
     docker stop {{project_name}}_container
     docker container rm -f {{project_name}}_container
     docker image rm -f {{project_name}}
