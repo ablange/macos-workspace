@@ -1,38 +1,34 @@
-# 		{{project_name}}
-#		~~~~~~~~~~~~~~~~
-# 		Makefile for ``{{project_name}}`` Python project.
-# 		Use these commands to build your local development environment.
-#
+# This Makefile was automatically generated using the macos-workspace Python template.
 help:
-	@echo -e "\
-	\n Makefile for ``{{project_name}}`` Python project.                        \												        \
+	@echo "\
+	\n Makefile for Python project: {{project_name}}    \
 	\n 													                        \
 	\n Usage:                    											    \
-	\n  - Run ``make setup`` to build your development environment.             \
-	\n  - Run ``make dependencies`` to install new packages as needed.          \
-	\n  - Run ``make clean`` before ``make setup`` to build a new Docker image. \
+	\n   - Run 'make setup' to initialize your development environment.         \
+	\n   - Run 'make dependencies' to install all required packages.            \
+	\n   - Run 'make clean' before 'make setup' to build a new Docker image.    \
 	\n													                        \
 	\n Example:													                \
     \n   $ make <COMMAND> 									                    \
     \n   e.g., $ make setup    							                        \
     \n														                    \
-	\n Commands: 									                    \
-    \n   clean: delete Docker container                                         \
-	\n   dependencies: install Python and OS dependencies                       \
-	\n   docs: generate Sphinx documentation from code                          \
-    \n   lint: run linter manually                                              \
-    \n   precommit: enable pre-commit code linter                               \
+	\n Commands: 									                            \
+    \n   clean:          delete and purge local development environment         \
+	\n   dependencies:   install Python and OS dependencies                     \
+	\n   docs:           generate Sphinx documentation from code                \
+    \n   lint:           run linter manually                                    \
+    \n   precommit:      enable pre-commit code linter                          \
     \n   precommit_stop: disable pre-commit code linter                         \
-   	\n   setup: initialize local development environment                        \
-	\n   start: start Docker container                                          \
-	\n   stop: stop Docker container                                            \
-	\n   test: run tests and generate coverage report                           \
+   	\n   setup:          initialize local development environment               \
+	\n   start:          start Docker container                                 \
+	\n   stop:           stop Docker container                                  \
+	\n   test:           run tests and generate coverage report                 \
 	"
 
 
 .PHONY: setup
 setup: docker_init
-	echo 'Initializing Python development environment ... '
+	echo 'Initializing your local development environment ... '
 
 
 #==============================================================================
@@ -40,24 +36,24 @@ setup: docker_init
 #==============================================================================
 .PHONY: docker_init
 docker_init:
-	echo 'Initializing Docker container ...'
+	echo 'Initializing Docker image and container ...'
 	docker build -t {{project_name}} .
 	docker run -d --name {{project_name}}_container {{project_name}}
 
 
-.PHONY: docker_start
+.PHONY: start
 start:
 	docker start {{project_name}}_container
 
 
-.PHONY: docker_stop
+.PHONY: stop
 stop:
 	docker stop {{project_name}}_container
 
 
-.PHONY: docker_clean
-docker_clean:
-    echo 'Deleting Docker container ...'
-    docker stop {{project_name}}_container
-    docker container rm -f {{project_name}}_container
-    docker image rm -f {{project_name}}
+.PHONY: clean
+clean:
+	echo 'Deleting Docker image and container ...'
+	docker stop {{project_name}}_container
+	docker container rm -f {{project_name}}_container
+	docker image rm -f {{project_name}}
