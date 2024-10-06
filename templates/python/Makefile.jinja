@@ -1,30 +1,29 @@
 # This Makefile was automatically generated using the macos-workspace Python template.
 help:
-    @echo "\
-    \n Makefile for Python project: {{project_name}}                            \
-    \n                                                                          \
-    \n Usage:                                                                   \
+	@echo "\
+	\n Makefile for Python project: {{project_name}}    \
+	\n																			\
+  	\n Usage:                                                                   \
     \n   - Run 'make setup' to initialize your development environment.         \
     \n   - Run 'make dependencies' to install all required packages.            \
     \n   - Run 'make clean' before 'make setup' to build a new Docker image.    \
-    \n                                                                          \
-    \n Example:                                                                 \
-    \n   $ make <COMMAND>                                                       \
-    \n   e.g., $ make setup                                                     \
-    \n                                                                          \
-    \n Commands:                                                                \
-    \n   clean:          delete local development environment                   \
-    \n   dependencies:   install Python and OS dependencies                     \
-    \n   docs:           generate Sphinx documentation from code                \
-    \n   lint:           run linter manually                                    \
-    \n   precommit:      enable pre-commit code linter                          \
-    \n   precommit_stop: disable pre-commit code linter                         \
-    \n   setup:          initialize local development environment               \
-    \n   start:          start Docker container                                 \
-    \n   stop:           stop Docker container                                  \
-    \n   test:           run tests and generate coverage report                 \
+    \n																			\
+	\n Example:																	\
+    \n   $ make <TEMPLATE> 														\
+    \n   e.g., $ make python 													\
+    \n																			\
+    \n Commands:																\
+    \n   clean          delete local development environment    				\
+    \n   dependencies   install Python and OS dependencies      				\
+    \n   docs           generate Sphinx documentation from code 				\
+    \n   lint           run linter manually                     				\
+    \n   precommit      enable pre-commit code linter           				\
+    \n   precommit_stop disable pre-commit code linter          				\
+    \n   setup          initialize local development environment				\
+    \n   start          start Docker container                  				\
+    \n   stop           stop Docker container                   				\
+    \n   test           run tests and generate coverage report  				\
 	"
-
 
 .PHONY: setup
 setup: docker_init
