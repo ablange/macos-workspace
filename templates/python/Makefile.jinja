@@ -27,15 +27,15 @@ help:
 	"
 
 .PHONY: setup
-setup: docker_init
+setup: docker
 	echo 'Initializing your local development environment ... '
 
 
 #==============================================================================
 # Docker
 #==============================================================================
-.PHONY: docker_init
-docker_init:
+.PHONY: docker
+docker:
 	echo 'Initializing Docker image and container ...'
 	docker build -t {{project_name}} .
 	docker run -d --name {{project_name}}_container {{project_name}}
