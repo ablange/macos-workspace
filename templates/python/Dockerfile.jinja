@@ -3,12 +3,13 @@ FROM ubuntu
 
 # Set home directory & copy project source code
 ENV HOME="/home"
-COPY . $HOME/repos/{{project_name}}
 WORKDIR $HOME
+ENV PROJECT="$HOME/repos/{{project_name}}"
+COPY . $PROJECT
 
 # Install OS packages
 RUN apt-get update
-RUN xargs -a $HOME/repos/granite/packages.txt apt-get install -y
+RUN xargs -a $PROJECT/packages.txt apt-get install -y
 
 # Install Python packages
 ENV PYTHON_VERSION=3.11.9
