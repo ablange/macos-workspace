@@ -1,30 +1,27 @@
 # macos-workspace
-Build system written in Bash designed to streamline development on macOS.
+Build system designed to streamline data projects on macOS.
 
 
 ## Features
 - __Bash Shell Manager__
-  - Manage and rebuild Bash shell with [Makefile](https://www.gnu.org/software/make/manual/make.html) commands.
-  - Store dotfiles (e.g., `.bashrc`) in version control and backup or branch as needed.
-  - Reproduce 100% of terminal setup on any macOS machine.
-  - Custom [PS1](https://www.gnu.org/software/bash/manual/html_node/Controlling-the-Prompt.html)
-    terminal prompt with development context (e.g., path, git branch).
-- __Data Product Development Templates__
-  - Rapidly prototype data products with a suite of [copier](https://copier.readthedocs.io/en/stable/) project templates.
-  - Handle software-related aspects of data projects so you can focus on the data itself.
-  - Ensure cross-platform compatibility and avoid dependency conflicts
-    by running each project in an isolated Docker container.
-  - Templates are interoperable so projects once initialized share
-    local network connectivity (e.g., database).
-  - Templates include...
-    - `Python`:
-      - Run Python 3.11 in a virtual environment with Pyenv and Docker.
-      - Manage Python and OS dependencies with Pdm.
-      - Lint, format, and style code on every commit with Ruf and Pre-commit.
-      - Generate documentation from code docstrings using Sphinx.
-      - Measure and enforce unit test coverage with pytest and coverage.
-    - __`Duckdb`__: Coming soon!   
-
+  - Programmatically manage your local shell with [Makefile](https://www.gnu.org/software/make/manual/make.html) commands.
+  - Store your dotfiles (e.g., `.bashrc`) in version control.
+  - Reproduce 100% of your terminal setup any macOS machine.
+  - Display your system context in real-time with
+    custom [PS1](https://www.gnu.org/software/bash/manual/html_node/Controlling-the-Prompt.html)
+    prompt (e.g., path, git branch) 
+- __Data Project Templates__
+  - Rapidly generate data project scaffolding
+    with a suite of interoperable [copier](https://copier.readthedocs.io/en/stable/) project templates.
+  - Each template provides a layer of abstraction over an open-source data tool (e.g., Python)
+    and incorporates relevant best practices and patterns.
+  - All projects run in isolated Docker containers which helps avoid dependency conflicts
+    and ensures cross-platform compatibility (i.e., Linux, Windows).
+  - `Python` template includes... 
+    - Lint with ``ruff`` and ``pre-commit``.
+    - Documentation with ``sphinx``.
+    - Manage dependencies with ``pdm``, ``pip-tools`` and ``pyenv``.
+    - Run tests and measure coverage with ``pytest`` and ``coverage``.
 
 ## Prerequisites
 
