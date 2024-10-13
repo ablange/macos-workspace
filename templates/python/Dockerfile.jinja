@@ -3,8 +3,8 @@ FROM ubuntu
 
 # Set home directory & copy project source code
 ENV HOME="/home"
-WORKDIR $HOME
-ENV PROJECT="$HOME/repos/{{project_name}}"
+ENV PROJECT="$HOME/repos/granite"
+WORKDIR $PROJECT
 COPY . $PROJECT
 
 # Install OS packages
@@ -21,6 +21,8 @@ RUN set -ex \
     && pyenv install $PYTHON_VERSION \
     && pyenv global $PYTHON_VERSION \
     && pyenv rehash
+RUN pip install --upgrade pip \
+    && pip install -r requirements.txt
 
 # Run tail command so container stays alive
 CMD ["tail", "-f", "/dev/null"]
