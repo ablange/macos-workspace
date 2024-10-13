@@ -1,11 +1,12 @@
 # This Makefile was automatically generated using the macos-workspace Python template.
+.PHONY: help setup docker start stop clean bash dependencies
 help:
 	@echo "\
 	\n Makefile for Python project: {{project_name}}    \
 	\n																			\
   	\n Usage:                                                                   \
     \n   - Run 'make setup' to initialize your development environment.         \
-    \n   - Run 'make dependencies' to install all required packages.            \
+    \n   - Run 'make dependencies' to install Python and OS packages.           \
     \n   - Run 'make clean' before 'make setup' to build a new Docker image.    \
     \n																			\
 	\n Example:																	\
@@ -26,32 +27,24 @@ help:
     \n   test           run tests and generate coverage report  				\
 	"
 
-.PHONY: setup
 setup: docker
 	echo 'Initializing your local development environment ... '
 
 
-#==============================================================================
-# Docker
-#==============================================================================
-.PHONY: docker
 docker:
 	echo 'Initializing Docker image and container ...'
 	docker build -t {{project_name}} .
 	docker run -d --name {{project_name}}_container -it -p 8000:8000 -v ~/repos/{{project_name}}:/home/repos/{{project_name}} {{project_name}}
 
 
-.PHONY: start
 start:
 	docker start {{project_name}}_container
 
 
-.PHONY: stop
 stop:
 	docker stop {{project_name}}_container
 
 
-.PHONY: clean
 clean:
 	echo 'Deleting Docker image and container ...'
 	docker stop {{project_name}}_container
@@ -59,6 +52,11 @@ clean:
 	docker image rm -f {{project_name}}
 
 
-.PHONY: bash
 bash:
 	docker exec -it {{project_name}}_container sh
+
+
+dependencies:
+	echo 'Installing Python and OS packages ... ...'
+	docker exec -it {{project_name}}_container pip-compile --output-file=requirements.txt pyproject.toml
+	docker exec -it {{project_name}}_container pip check && pip install -r requirements.txt
