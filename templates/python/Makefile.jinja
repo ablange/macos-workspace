@@ -34,7 +34,8 @@ setup: docker dependencies
 docker:
 	echo 'Initializing Docker image and container ...'
 	docker build -t {{project_name}} .
-	docker run -d --name {{project_name}}_container -it -p 8000:8000 -v ~/repos/{{project_name}}:/home/repos/{{project_name}} {{project_name}}
+	docker run -d --name {{project_name}}_container -it --publish-all \
+	    -v ~/repos/{{project_name}}:/home/repos/{{project_name}} {{project_name}}
 
 
 start:
