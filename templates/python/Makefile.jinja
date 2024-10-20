@@ -50,13 +50,34 @@ clean:
 	docker stop {{project_name}}_container
 	docker container rm -f {{project_name}}_container
 	docker image rm -f {{project_name}}
+	echo 'Deleting any remaining caches ...'
+	find . -name '*.egg-info' -print0 | xargs -0 rm -rf
+	-rm -rf \
+		build \
+		dist
 
 
 bash:
+	echo 'Starting Bash shell into container ...'
 	docker exec -it {{project_name}}_container sh
 
 
-dependencies:
-	echo 'Installing Python and OS packages ... ...'
+dependencies: apt pip
+
+
+apt:
+	echo 'Installing Apt packages ...'
+	docker exec -it {{project_name}}_container apt-get update
+	docker exec -it {{project_name}}_container xargs -a packages.txt apt-get install -y
+
+
+pip:
+	echo 'Installing Pip packages ...'
 	docker exec -it {{project_name}}_container pip-compile --output-file=requirements.txt pyproject.toml
+	docker exec -it {{project_name}}_container pip install --upgrade pip
 	docker exec -it {{project_name}}_container pip check && pip install -r requirements.txt
+
+
+wheel:
+	echo 'Building binary package wheel ...'
+	docker exec -it {{project_name}}_container python -m build --wheel
