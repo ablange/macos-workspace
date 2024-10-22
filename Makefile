@@ -87,6 +87,7 @@ python_core:
 	mkdir -p ~/repos/
 
 
+# TODO: Accept ``python_version`` parameter & use throughout template.
 project_name = default_project_name
 .PHONY: python
 python:
