@@ -98,7 +98,7 @@ python:
 
 .PHONY: python_recopy
 python_recopy:
-	echo 'pushing template updates to existing Python project ... '
+	echo 'applying template updates to existing Python project ... '
 	(cd ~/repos/$(project_name); copier recopy)
 
 
