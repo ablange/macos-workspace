@@ -1,5 +1,5 @@
 # This Makefile was automatically generated using the macos-workspace Python template.
-.PHONY: help setup docker start stop clean bash dependencies
+.PHONY: help setup container start stop clean bash dependencies apt pip wheel template local local_pyenv local_dev_dependencies precommit
 help:
 	@echo "\
 	\n Makefile for Python project: {{project_name}}    \
@@ -14,24 +14,25 @@ help:
     \n   e.g., $ make setup 													\
     \n \
     \n Commands: \
-    \n   bash           Run interactive Bash shell inside Docker container		\
-    \n   clean          delete local development environment    				\
+    \n   bash           run Bash shell inside Docker container	              	\
+    \n   clean          teardown environment and delete cache files  			\
     \n   dependencies   install Python and OS dependencies      				\
     \n   docs           generate Sphinx documentation from code 				\
+    \n   container      initialize Docker image and container 	     			\
     \n   lint           run linter manually                     				\
-    \n   precommit      enable pre-commit code linter           				\
-    \n   precommit_stop disable pre-commit code linter          				\
+    \n   precommit      start pre-commit hook           				        \
+    \n   precommit_stop stop pre-commit hook                    				\
     \n   setup          initialize local development environment				\
     \n   start          start Docker container                  				\
     \n   stop           stop Docker container                   				\
     \n   test           run tests and generate coverage report  				\
 	"
 
-setup: docker dependencies
-	echo 'Initializing your local development environment ... '
+setup: container dependencies local
+	echo 'Initializing your development environment ... '
 
 
-docker:
+container:
 	echo 'Initializing Docker image and container ...'
 	docker build -t {{project_name}} .
 	docker run -d --name {{project_name}}_container -it --publish-all \
@@ -82,3 +83,35 @@ pip:
 wheel:
 	echo 'Building binary package wheel ...'
 	docker exec -it {{project_name}}_container python -m build --wheel
+
+
+template:
+	echo 'Pulling template updates from: macos-workspace/templates/python ...'
+	copier recopy
+
+
+local: local_pyenv local_dev_dependencies precommit
+	echo 'Initializing your local development environment ... '
+
+
+# TODO: Create constant variable ENV_NAME to simplify code.
+local_pyenv:
+	echo 'Initializing Python virtual environment locally ...'
+	pyenv virtualenv 3.11.9 {{project_name}}-virtualenv-3.11.9
+	pyenv local {{project_name}}-virtualenv-3.11.9
+
+
+# TODO: Install ``requirements.dev.txt`` with local dependencies.
+local_dev_dependencies:
+	echo 'Installing Python dev requirements locally ...'
+
+
+clean_local:
+	echo 'Deleting local Python virtual environment ...'
+	pyenv uninstall {{project_name}}-virtualenv-3.11.9
+	rm .python-version
+
+
+# TODO: Start pre-commit hook.
+precommit:
+	echo 'Starting pre-commit hook ...'
