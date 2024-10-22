@@ -6,6 +6,9 @@ source ~/.bash_aliases
 source ~/.git-prompt.sh
 source ~/.git-completion.bash
 
+# Git editor
+export GIT_EDITOR=nano
+
 # Pyenv
 export PYENV_ROOT="$HOME/.pyenv"
 command -v pyenv >/dev/null || export PATH="$PYENV_ROOT/bin:$PATH"
@@ -30,3 +33,5 @@ function cd() {
       fi
   fi
 }
+
+
