@@ -94,11 +94,11 @@ local: local_pyenv local_dev_dependencies precommit
 	echo 'Initializing your local development environment ... '
 
 
-# TODO: Create constant variable ENV_NAME to simplify code.
+env_name = {{project_name}}-virtualenv-3.11.9
 local_pyenv:
 	echo 'Initializing Python virtual environment locally ...'
-	pyenv virtualenv 3.11.9 {{project_name}}-virtualenv-3.11.9
-	pyenv local {{project_name}}-virtualenv-3.11.9
+	pyenv virtualenv 3.11.9 $(env_name)
+	pyenv local $(env_name)
 
 
 # TODO: Install ``requirements.dev.txt`` with local dependencies.
@@ -108,7 +108,7 @@ local_dev_dependencies:
 
 clean_local:
 	echo 'Deleting local Python virtual environment ...'
-	pyenv uninstall {{project_name}}-virtualenv-3.11.9
+	pyenv uninstall $(env_name)
 	rm .python-version
 
 
