@@ -8,7 +8,14 @@ classifiers = [
   "Programming Language :: Python"
 ]
 
-# Run ``make dependencies`` to compile and install the following Python packages:
+# Run ``make dependencies`` to install packages declared as runtime dependencies:
 dependencies = [
   "pip-tools",
+  "django<2.2",  # test
+]
+
+# Run ``make optional_dependencies`` to install packages declared for development purposes::
+[project.optional-dependencies]
+dev = [
+  "django-debug-toolbar<2.2"  # test
 ]

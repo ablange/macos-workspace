@@ -94,24 +94,28 @@ local: local_pyenv local_dev_dependencies precommit
 	echo 'Initializing your local development environment ... '
 
 
+# TODO: Parameterize ``python_version`` by adding copier variable.
 env_name = {{project_name}}-virtualenv-3.11.9
 local_pyenv:
 	echo 'Initializing Python virtual environment locally ...'
 	pyenv virtualenv 3.11.9 $(env_name)
 	pyenv local $(env_name)
+	pip install -r dev-requirements.txt
 
 
-# TODO: Install ``requirements.dev.txt`` with local dependencies.
 local_dev_dependencies:
 	echo 'Installing Python dev requirements locally ...'
+	pip-compile --output-file=dev-requirements.txt pyproject.toml --extra dev
+	pip install -r dev-requirements.txt
 
 
 clean_local:
 	echo 'Deleting local Python virtual environment ...'
+	pip freeze | xargs pip uninstall -y
 	pyenv uninstall $(env_name)
 	rm .python-version
 
 
-# TODO: Start pre-commit hook.
+# TODO: Implement.
 precommit:
 	echo 'Starting pre-commit hook ...'
