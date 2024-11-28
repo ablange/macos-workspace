@@ -10,14 +10,13 @@ click==8.1.7
     # via pip-tools
 django==2.1.15
     # via
-    #   {{project_name}} (pyproject.toml)
     #   django-debug-toolbar
 django-debug-toolbar==2.1
-    # via {{project_name}} (pyproject.toml)
+    # via pyproject.toml
 packaging==24.2
     # via build
 pip-tools==7.4.1
-    # via {{project_name}} (pyproject.toml)
+    # via pyproject.toml
 pyproject-hooks==1.2.0
     # via
     #   build
