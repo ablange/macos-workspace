@@ -1,0 +1,116 @@
+# This Makefile was automatically generated using the macos-workspace Python template.
+.PHONY: help setup container start stop clean bash dependencies apt pip wheel template local local_pyenv local_dev_dependencies precommit
+help:
+	@echo "\
+	\n Makefile for Python project: {{project_name}}    \
+	\n \
+  	\n Usage: \
+    \n   - Run 'make setup' to initialize your development environment.         \
+    \n   - Run 'make dependencies' to install Python and OS packages.           \
+    \n   - Run 'make clean' before 'make setup' to build a new Docker image.    \
+    \n \
+	\n Example: \
+    \n   $ make <COMMAND> 														\
+    \n   e.g., $ make setup 													\
+    \n \
+    \n Commands: \
+    \n   bash           run Bash shell inside Docker container	              	\
+    \n   clean          teardown environment and delete cache files  			\
+    \n   dependencies   install Python and OS dependencies      				\
+    \n   docs           generate Sphinx documentation from code 				\
+    \n   container      initialize Docker image and container 	     			\
+    \n   lint           run linter manually                     				\
+    \n   precommit      start pre-commit hook           				        \
+    \n   precommit_stop stop pre-commit hook                    				\
+    \n   setup          initialize local development environment				\
+    \n   start          start Docker container                  				\
+    \n   stop           stop Docker container                   				\
+    \n   test           run tests and generate coverage report  				\
+	"
+
+setup: container dependencies local
+	echo 'Initializing your development environment ... '
+
+
+container:
+	echo 'Initializing Docker image and container ...'
+	docker build -t {{project_name}} .
+	docker run -d --name {{project_name}}_container -it --publish-all \
+	    -v ~/repos/{{project_name}}:/home/repos/{{project_name}} {{project_name}}
+
+
+start:
+	docker start {{project_name}}_container
+
+
+stop:
+	docker stop {{project_name}}_container
+
+
+clean:
+	echo 'Deleting Docker image and container ...'
+	docker stop {{project_name}}_container
+	docker container rm -f {{project_name}}_container
+	docker image rm -f {{project_name}}
+	echo 'Deleting any remaining caches ...'
+	find . -name '*.egg-info' -print0 | xargs -0 rm -rf
+	-rm -rf \
+		build \
+		dist
+
+
+bash:
+	echo 'Starting Bash shell into container ...'
+	docker exec -it {{project_name}}_container sh
+
+
+dependencies: apt pip
+
+
+apt:
+	echo 'Installing Apt packages ...'
+	docker exec -it {{project_name}}_container apt-get update
+	docker exec -it {{project_name}}_container xargs -a packages.txt apt-get install -y
+
+
+pip:
+	echo 'Installing Pip packages ...'
+	docker exec -it {{project_name}}_container pip install --upgrade pip
+	docker exec -it {{project_name}}_container pip-compile --output-file=requirements.txt pyproject.toml
+	docker exec -it {{project_name}}_container pip check && pip install -r requirements.txt
+
+
+wheel:
+	echo 'Building binary package wheel ...'
+	docker exec -it {{project_name}}_container python -m build --wheel
+
+
+template:
+	echo 'Pulling template updates from: macos-workspace/templates/python ...'
+	copier recopy
+
+
+local: local_pyenv local_pip
+	echo 'Initializing your local development environment ... '
+
+
+env_name = {{project_name}}-virtualenv-3.11.9
+local_pyenv:
+	echo 'Initializing Python virtual environment locally ...'
+	pyenv virtualenv 3.11.9 $(env_name)
+	pyenv local $(env_name)
+	pip install -r requirements.dev.txt
+
+
+local_pip:
+	echo 'Installing Pip packages locally ...'
+	pip install --upgrade pip
+	pip-compile --output-file=requirements.dev.txt pyproject.toml --extra dev
+	pip check && pip install -r requirements.dev.txt
+
+
+clean_local:
+	echo 'Deleting local Python virtual environment ...'
+	pip freeze | xargs pip uninstall -y
+	pyenv uninstall $(env_name)
+	rm .python-version
