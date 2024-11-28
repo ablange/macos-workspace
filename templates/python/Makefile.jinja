@@ -75,8 +75,8 @@ apt:
 
 pip:
 	echo 'Installing Pip packages ...'
-	docker exec -it {{project_name}}_container pip-compile --output-file=requirements.txt pyproject.toml
 	docker exec -it {{project_name}}_container pip install --upgrade pip
+	docker exec -it {{project_name}}_container pip-compile --output-file=requirements.txt pyproject.toml
 	docker exec -it {{project_name}}_container pip check && pip install -r requirements.txt
 
 
@@ -90,23 +90,23 @@ template:
 	copier recopy
 
 
-local: local_pyenv local_dev_dependencies precommit
+local: local_pyenv local_pip
 	echo 'Initializing your local development environment ... '
 
 
-# TODO: Parameterize ``python_version`` by adding copier variable.
 env_name = {{project_name}}-virtualenv-3.11.9
 local_pyenv:
 	echo 'Initializing Python virtual environment locally ...'
 	pyenv virtualenv 3.11.9 $(env_name)
 	pyenv local $(env_name)
-	pip install -r dev-requirements.txt
+	pip install -r requirements.dev.txt
 
 
-local_dev_dependencies:
-	echo 'Installing Python dev requirements locally ...'
-	pip-compile --output-file=dev-requirements.txt pyproject.toml --extra dev
-	pip install -r dev-requirements.txt
+local_pip:
+	echo 'Installing Pip packages locally ...'
+	pip install --upgrade pip
+	pip-compile --output-file=requirements.dev.txt pyproject.toml --extra dev
+	pip check && pip install -r requirements.dev.txt
 
 
 clean_local:
@@ -114,8 +114,3 @@ clean_local:
 	pip freeze | xargs pip uninstall -y
 	pyenv uninstall $(env_name)
 	rm .python-version
-
-
-# TODO: Implement.
-precommit:
-	echo 'Starting pre-commit hook ...'
