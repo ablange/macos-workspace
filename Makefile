@@ -53,7 +53,8 @@ os_dependencies:
 			tcl-tk   \
 			wget   \
 			docker \
-			copier
+			copier \
+			bash-completion
 
 
 .PHONY: git
