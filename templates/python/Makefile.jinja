@@ -90,7 +90,7 @@ template:
 	copier recopy
 
 
-local: local_pyenv local_pip
+local: local_pyenv local_pip precommit
 	echo 'Initializing your local development environment ... '
 
 
@@ -111,6 +111,12 @@ local_pip:
 
 clean_local:
 	echo 'Deleting local Python virtual environment ...'
+	pre-commit uninstall
 	pip freeze | xargs pip uninstall -y
 	pyenv uninstall $(env_name)
 	rm .python-version
+
+
+precommit:
+	echo 'Installing pre-commit hooks ...'
+	pre-commit install

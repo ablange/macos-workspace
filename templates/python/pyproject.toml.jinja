@@ -1,3 +1,7 @@
+#####################################################################################
+#####  Pyproject TOML Configuration                                             #####
+#####    https://packaging.python.org/en/latest/guides/writing-pyproject-toml/  #####
+#####################################################################################
 [project]
 name = "{{project_name}}"
 version = "0.0.0"
@@ -8,6 +12,11 @@ classifiers = [
   "Programming Language :: Python"
 ]
 
+
+#############################################################################################
+#####  Pip-tools Dependencies                                                           #####
+#####    https://pip-tools.readthedocs.io/en/latest/#workflow-for-layered-requirements  #####
+#############################################################################################
 # Run ``make dependencies`` to install packages declared as runtime dependencies:
 dependencies = [
   "pip-tools",
@@ -17,5 +26,131 @@ dependencies = [
 # Run ``make optional_dependencies`` to install packages declared for development purposes::
 [project.optional-dependencies]
 dev = [
-  "django-debug-toolbar<2.2"  # test
+  "django-debug-toolbar<2.2",  # test
+  "ruff",
+  "pre-commit"
 ]
+
+
+##########################################################
+#####  Ruff Configuration                            #####
+#####    https://docs.astral.sh/ruff/configuration/  #####
+##########################################################
+[tool.ruff]
+line-length = 100
+indent-width = 4
+
+# Exclude a variety of commonly ignored directories.
+exclude = [
+    ".bzr",
+    ".direnv",
+    ".eggs",
+    ".git",
+    ".git-rewrite",
+    ".hg",
+    ".ipynb_checkpoints",
+    ".mypy_cache",
+    ".nox",
+    ".pants.d",
+    ".pyenv",
+    ".pytest_cache",
+    ".pytype",
+    ".ruff_cache",
+    ".svn",
+    ".tox",
+    ".venv",
+    ".vscode",
+    "__pypackages__",
+    "_build",
+    "buck-out",
+    "build",
+    "dist",
+    "node_modules",
+    "site-packages",
+    "venv",
+]
+
+# Assume Python 3.9
+target-version = "py39"
+
+# Allow fix for all enabled rules (when `--fix`) is provided.
+fixable = ["ALL"]
+unfixable = []
+
+# Allow unused variables when underscore-prefixed.
+dummy-variable-rgx = "^(_+|(_+[a-zA-Z0-9_]*[a-zA-Z0-9]+?))$"
+
+
+###################################################
+#####  Ruff Linter                            #####
+#####    https://docs.astral.sh/ruff/linter/  #####
+###################################################
+[tool.ruff.lint]
+select = [
+  # Enable Pyflakes (`F`) and a subset of the pycodestyle (`E`)  codes by default.
+  # Unlike Flake8, Ruff doesn't enable pycodestyle warnings (`W`) or
+  # McCabe complexity (`C901`) by default.
+  "F",
+  "E4",
+  "E7",
+  "E9",
+  "ANN", # flake8 type annotations
+  "I",   # isort
+  "RUF", # ruff-specific rules
+  "D"    # pydocstyle
+]
+ignore = [
+  # On top of the Google convention, disable `D417`, which requires
+  # documentation for every function parameter.
+  "D417"
+]
+
+# Allow fix for all enabled rules (when `--fix`) is provided.
+fixable = ["ALL"]
+unfixable = []
+
+# Allow unused variables when underscore-prefixed.
+dummy-variable-rgx = "^(_+|(_+[a-zA-Z0-9_]*[a-zA-Z0-9]+?))$"
+
+
+######################################################
+#####  Ruff Formatter                            #####
+#####    https://docs.astral.sh/ruff/formatter/  #####
+######################################################
+[tool.ruff.format]
+
+# Like Black, use double quotes for strings.
+quote-style = "double"
+
+# Like Black, indent with spaces, rather than tabs.
+indent-style = "space"
+
+# Like Black, respect magic trailing commas.
+skip-magic-trailing-comma = false
+
+# Like Black, automatically detect the appropriate line ending.
+line-ending = "auto"
+
+# Enable auto-formatting of code examples in docstrings. Markdown,
+# reStructuredText code/literal blocks and doctests are all supported.
+#
+# This is currently disabled by default, but it is planned for this
+# to be opt-out in the future.
+docstring-code-format = false
+
+# Set the line length limit used when formatting code snippets in
+# docstrings.
+#
+# This only has an effect when the `docstring-code-format` setting is
+# enabled.
+docstring-code-line-length = "dynamic"
+
+
+################################################################################
+#####  Ruff Docstring Formatter                                            #####
+#####    https://docs.astral.sh/ruff/settings/#lint_pydocstyle_convention  #####
+################################################################################
+[tool.ruff.lint.pydocstyle]
+# Enable all `pydocstyle` rules, limiting to those that adhere to the
+# Google convention via `convention = "google"`, below.
+convention = "google"
