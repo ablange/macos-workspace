@@ -10,7 +10,7 @@
 - All Bash must run on system Bash 3.2 (no `globstar`, `mapfile`, associative arrays, or `${var,,}`) and GNU Make 3.81.
 - `make lint test` must pass before completion.
 - Tests must never mutate the machine. Only `make doctor` inspects the machine, and it only reports.
-- Do not import unrelated historical workspace architecture. The only sanctioned reference is the `mini-data-stack-hedge-fund` `shell/bash/` layout.
+- Do not inherit architecture or configuration from historical workspace projects unless explicitly asked to inspect a specific pattern.
 - Do not add `.cursor/`, `.vscode/`, or project-specific IDE configuration.
 - Record decisions in `knowledge/decisions/`.
 - Never hard-code Homebrew prefixes such as `/opt/homebrew`; use `brew --prefix` or `brew shellenv`.

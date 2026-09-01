@@ -18,7 +18,7 @@ TMP_HOME="$(mktemp -d)"
 trap 'rm -rf "$TMP_HOME"' EXIT
 export HOME="$TMP_HOME"
 
-required_files="README.md LICENSE Makefile Brewfile AGENTS.md .gitignore knowledge/index.md scripts/lint.sh scripts/test.sh"
+required_files="README.md LICENSE Makefile Brewfile AGENTS.md .gitignore knowledge/index.md knowledge/architecture/repository.md knowledge/decisions/0001-workstation-bootstrap-architecture.md scripts/lint.sh scripts/test.sh"
 for file in $required_files; do
   if [ -e "$file" ]; then
     pass "exists: $file"

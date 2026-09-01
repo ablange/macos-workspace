@@ -25,7 +25,7 @@ Opinionated bootstrap for one real Mac. This repository is public and specific: 
 
 Homebrew is a prerequisite. The Brewfile cannot install Homebrew, and it lists only intentional top-level tools, not everything `brew list` happens to show.
 
-The clone never replaces `~/.bashrc` or rewrites `~/.gitconfig`. The user adds a single `source` line and a single Git `include`. Machine-specific values stay in local files that this repository does not track.
+The clone never replaces `~/.bashrc` or rewrites `~/.gitconfig`. Shell integration is manual: the user adds a single `source` line. A later `git` target adds one safe, idempotent `include.path` for portable Git config. Machine-specific values stay in local files that this repository does not track.
 
 ## Homebrew
 
