@@ -11,8 +11,8 @@ updated: 2026-09-01
 | Path | Role |
 | --- | --- |
 | `Makefile` | Human interface. Each target delegates to one script. |
-| `Brewfile` | Declarative package layer. Placeholder in M00; populated in M01. |
-| `scripts/` | Executable automation. Lint and test exist today; later milestones add installers and `doctor`. |
+| `Brewfile` | Declarative package layer. Populated in M01. |
+| `scripts/` | Executable automation. `lint.sh`, `test.sh`, `prerequisites.sh`, and `brew.sh` exist today; later milestones add remaining installers and `doctor`. |
 | `shell/` | Sourced Bash configuration (later milestone). Never sets strict-mode flags. |
 | `git/` | Portable Git configuration (later milestone). |
 | `docs/` | Manual setup that must not be automated (later milestone). |
@@ -39,7 +39,7 @@ Make is the entry point. Recipes contain no logic beyond invoking a script. Scri
 
 ## Eventual bootstrap sequence
 
-This sequence is the target architecture. Only `help`, `lint`, and `test` are implemented in M00.
+This sequence is the target architecture. `help`, `lint`, `test`, `prerequisites`, and `brew` are implemented.
 
 ```mermaid
 flowchart LR

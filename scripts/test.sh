@@ -18,7 +18,7 @@ TMP_HOME="$(mktemp -d)"
 trap 'rm -rf "$TMP_HOME"' EXIT
 export HOME="$TMP_HOME"
 
-required_files="README.md LICENSE Makefile Brewfile AGENTS.md .gitignore knowledge/index.md knowledge/architecture/repository.md knowledge/decisions/0001-workstation-bootstrap-architecture.md scripts/lint.sh scripts/test.sh"
+required_files="README.md LICENSE Makefile Brewfile AGENTS.md .gitignore knowledge/index.md knowledge/architecture/repository.md knowledge/decisions/0001-workstation-bootstrap-architecture.md knowledge/decisions/0002-homebrew-package-contract.md scripts/lint.sh scripts/test.sh scripts/prerequisites.sh scripts/brew.sh"
 for file in $required_files; do
   if [ -e "$file" ]; then
     pass "exists: $file"
@@ -33,10 +33,64 @@ else
   fail "LICENSE is not Apache 2.0"
 fi
 
-if grep -qEv '^[[:space:]]*(#|$)' Brewfile; then
-  fail "Brewfile is not comment-only"
+if grep -qE '^brew "' Brewfile && grep -qE '^cask "' Brewfile; then
+  pass "Brewfile declares formula and cask entries"
 else
-  pass "Brewfile is comment-only"
+  fail "Brewfile must declare at least one formula and one cask"
+fi
+
+if grep -Ev '^[[:space:]]*(#|$)' Brewfile | grep -Ev '^(tap|brew|cask) "' >/dev/null; then
+  fail "Brewfile has a line that is not a tap, brew, or cask declaration"
+else
+  pass "Brewfile declaration lines are valid DSL"
+fi
+
+if grep -qE '^brew "python' Brewfile; then
+  fail "Brewfile must not declare a Homebrew Python interpreter"
+else
+  pass "Brewfile does not declare a Homebrew Python interpreter"
+fi
+
+if grep -qE '^cask "docker-desktop"' Brewfile; then
+  pass "Brewfile declares docker-desktop cask"
+else
+  fail "Brewfile missing docker-desktop cask"
+fi
+
+if grep -qE '^brew "(docker|docker-compose|podman)"' Brewfile; then
+  fail "Brewfile must not declare standalone docker, docker-compose, or podman formulae"
+else
+  pass "Brewfile omits standalone docker, docker-compose, and podman formulae"
+fi
+
+# Forbidden prefix strings are split so this file is not a self-match.
+opt_home="/opt/home"
+usr_home="/usr/local/Home"
+brew_suffix="brew"
+if grep -E "${opt_home}${brew_suffix}|${usr_home}${brew_suffix}" Makefile Brewfile scripts/*.sh >/dev/null; then
+  fail "hard-coded Homebrew prefix in Makefile, Brewfile, or scripts"
+else
+  pass "no hard-coded Homebrew prefix in Makefile, Brewfile, or scripts"
+fi
+
+if grep -E 'bundle cleanup|autoremove|--force' scripts/brew.sh >/dev/null; then
+  fail "scripts/brew.sh must not use bundle cleanup, autoremove, or --force"
+else
+  pass "scripts/brew.sh has no bundle cleanup, autoremove, or --force"
+fi
+
+if grep -q 'brew bundle' Makefile; then
+  fail "Makefile must not invoke Homebrew Bundle; delegate to a script"
+else
+  pass "Makefile does not invoke Homebrew Bundle"
+fi
+
+# Match a Homebrew CLI invocation. Quoted DSL needles such as 'brew "
+# do not match because a quote precedes the token.
+if grep -E '(^|[[:space:]])brew[[:space:]]' scripts/test.sh >/dev/null; then
+  fail "scripts/test.sh must not invoke Homebrew"
+else
+  pass "scripts/test.sh does not invoke Homebrew"
 fi
 
 while IFS= read -r file; do

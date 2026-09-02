@@ -44,7 +44,7 @@ shellcheck_available=0
 if command -v shellcheck >/dev/null 2>&1; then
   shellcheck_available=1
 else
-  echo "lint: shellcheck not found; skipping (optional until M01)"
+  echo "lint: shellcheck not found; skipping (declared in Brewfile; run 'make brew')"
 fi
 
 run_shellcheck() {
