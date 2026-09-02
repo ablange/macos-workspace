@@ -33,6 +33,7 @@ required_files=(
   scripts/test.sh
   scripts/prerequisites.sh
   scripts/brew.sh
+  scripts/git_pull.sh
 )
 for file in "${required_files[@]}"; do
   if [ -e "$file" ]; then
@@ -149,6 +150,20 @@ if grep -q 'brew bundle' Makefile; then
   fail "Makefile must not invoke Homebrew Bundle; delegate to a script"
 else
   pass "Makefile does not invoke Homebrew Bundle"
+fi
+
+if grep -E '(^|[[:space:]])git[[:space:]]' Makefile >/dev/null; then
+  fail "Makefile must not invoke git; delegate to a script"
+else
+  pass "Makefile does not invoke git"
+fi
+
+git_pull_commands="$(grep -E '^git ' scripts/git_pull.sh || true)"
+expected_git_pull_commands="$(printf '%s\n' 'git checkout main' 'git pull origin main' 'git fetch -p')"
+if [ "$git_pull_commands" = "$expected_git_pull_commands" ]; then
+  pass "git_pull.sh checks out main, pulls origin, and prunes remotes"
+else
+  fail "git_pull.sh must run git checkout main, git pull origin main, then git fetch -p"
 fi
 
 # Match a Homebrew CLI invocation. Quoted DSL needles such as 'brew "

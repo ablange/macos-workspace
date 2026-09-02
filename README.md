@@ -107,6 +107,7 @@ Implemented:
 - `test` — repository invariant tests
 - `prerequisites` — Xcode CLT and Homebrew
 - `brew` — `brew bundle` from the Brewfile (install missing packages; no proactive upgrade, cleanup, or GUI-app adoption)
+- `git_pull` — checkout `main`, pull `origin main`, then prune remote-tracking refs (`git fetch -p`)
 
 Planned:
 
