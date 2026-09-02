@@ -28,17 +28,21 @@ brew "astronomer/tap/astro", args: ["without-podman"], trusted: true
 brew "awscli"
 brew "databricks/tap/databricks", trusted: true
 
+# GUI applications. Install the cask only when the bundle is absent
+# from /Applications. Existing apps are left unmanaged and untouched;
+# Homebrew Bundle must never adopt or mutate them.
+
 # Containers  (Docker Desktop owns runtime, CLI, Compose)
-cask "docker-desktop"
+cask "docker-desktop" unless File.exist?("/Applications/Docker.app")
 
 # Developer applications
-cask "cursor"
-cask "dbeaver-community"
-cask "iterm2"
+cask "cursor" unless File.exist?("/Applications/Cursor.app")
+cask "dbeaver-community" unless File.exist?("/Applications/DBeaver.app")
+cask "iterm2" unless File.exist?("/Applications/iTerm.app")
 
 # Productivity
-cask "chatgpt"
-cask "google-chrome"
-cask "microsoft-teams"
-cask "rectangle"
-cask "zoom"
+cask "chatgpt" unless File.exist?("/Applications/ChatGPT.app")
+cask "google-chrome" unless File.exist?("/Applications/Google Chrome.app")
+cask "microsoft-teams" unless File.exist?("/Applications/Microsoft Teams.app")
+cask "rectangle" unless File.exist?("/Applications/Rectangle.app")
+cask "zoom" unless File.exist?("/Applications/zoom.us.app")
