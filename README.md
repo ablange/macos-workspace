@@ -23,13 +23,54 @@ Opinionated bootstrap for one real Mac. This repository is public and specific: 
 
 ## Installation philosophy
 
-Homebrew is a prerequisite. The Brewfile cannot install Homebrew, and it lists only intentional top-level tools, not everything `brew list` happens to show.
+Homebrew is a prerequisite, installed by `make prerequisites` when missing. The Brewfile cannot install Homebrew, and it lists only intentional top-level tools, not everything `brew list` happens to show.
 
 The clone never replaces `~/.bashrc` or rewrites `~/.gitconfig`. Shell integration is manual: the user adds a single `source` line. A later `git` target adds one safe, idempotent `include.path` for portable Git config. Machine-specific values stay in local files that this repository does not track.
 
 ## Homebrew
 
-Homebrew must already be installed (or installed by a later `prerequisites` script). The root `Brewfile` is the package contract. In M00 it is a placeholder comment only; package selection is M01.
+M01 is implemented. The root `Brewfile` is the intentional software contract: a hand-curated list of top-level formulae and casks, never generated with `brew bundle dump`. pyenv owns Python interpreters. Docker Desktop owns the container runtime, the `docker` CLI, and Compose.
+
+- `make prerequisites` verifies Xcode Command Line Tools and installs Homebrew when it is missing.
+- `make brew` installs missing declared packages with `brew bundle install --no-upgrade`. It does not proactively upgrade existing Brewfile packages. Installing a missing package may still upgrade a dependency that package requires. It never runs `bundle cleanup`, `autoremove`, `--force`, or `--adopt`.
+
+Existing GUI applications are left unmanaged and untouched. Homebrew installs the cask only when the corresponding application is absent from `/Applications`. This avoids brittle automatic cask adoption while still allowing a fresh Mac to install the full application baseline. `make brew` never adopts, overwrites, or reinstalls an existing GUI app.
+
+Third-party trust is formula-scoped (`trusted: true` on `databricks/tap/databricks` and `astronomer/tap/astro`) and recorded in `~/.homebrew/trust.json` by `brew bundle`. Application and cloud authentication stay manual.
+
+The standalone Homebrew `docker` and `podman` formulae are not part of the intended contract. `astro` is declared from the Astronomer tap with `--without-podman` so Docker Desktop stays the sole container runtime. The Homebrew-core `astro` formula is omitted because it forces Podman. Apps without a cask stay manual.
+
+## One-time migration — review before running
+
+These commands **change the Mac**. They are **not** automated and **must not** be run as part of repository validation. Review them, then run them explicitly if you want this machine to match the M01 contract.
+
+Before uninstalling, inspect what Homebrew thinks depends on the packages and what autoremove would drop:
+
+```bash
+brew uses --installed docker
+brew uses --installed podman
+brew autoremove --dry-run
+```
+
+Then migrate. `HOMEBREW_NO_AUTOREMOVE=1` keeps unused formula dependencies in place so they can be reviewed instead of removed automatically. `brew uninstall astro` removes the Homebrew-core formula (which pulls Podman); `make brew` then installs `astronomer/tap/astro` with `--without-podman`.
+
+```bash
+HOMEBREW_NO_AUTOREMOVE=1 brew uninstall docker docker-completion
+HOMEBREW_NO_AUTOREMOVE=1 brew uninstall astro podman
+make brew
+```
+
+After the uninstalls, inspect leftover dependencies again and decide whether any should actually go:
+
+```bash
+brew autoremove --dry-run
+```
+
+Optional review (out of scope for `make brew`; do not automate):
+
+- `coreutils` (present only as a dependency today)
+- `tcl-tk` and `zlib` leaves
+- unrelated Nix profile entries on `PATH`
 
 ## Bash
 
@@ -64,11 +105,11 @@ Implemented:
 - `help` — list targets
 - `lint` — static checks
 - `test` — repository invariant tests
-
-Planned (not implemented in M00):
-
 - `prerequisites` — Xcode CLT and Homebrew
-- `brew` — `brew bundle` from the Brewfile
+- `brew` — `brew bundle` from the Brewfile (install missing packages; no proactive upgrade, cleanup, or GUI-app adoption)
+
+Planned:
+
 - `shell` — print the Bash `source` line; never edit `~/.bashrc`
 - `git` — idempotent `include.path` for portable Git config
 - `python` — pyenv default version and `pipx ensurepath`
@@ -81,9 +122,10 @@ Planned (not implemented in M00):
 
 1. Clone this repository.
 2. Confirm `make help`, `make lint`, and `make test` succeed.
-3. Follow the project roadmap from M01 onward for packages, shell, Git, Python, defaults, and bootstrap.
-4. Complete documented manual steps (auth, apps without a cask, GUI preferences).
+3. Run `make prerequisites`, then `make brew`.
+4. Follow the project roadmap from M02 onward for shell, Git, Python, defaults, and bootstrap.
+5. Complete documented manual steps (auth, apps without a cask, GUI preferences).
 
 ## Roadmap
 
-M00 (Repository Foundation) is what this tree implements. M01 (Homebrew package selection) is next. The authoritative roadmap lives outside this repository; knowledge files record durable architecture and decisions only.
+M00 (Repository Foundation) and M01 (Homebrew Workstation Baseline) are what this tree implements. M02 (shell configuration) is next. The authoritative roadmap lives outside this repository; knowledge files record durable architecture and decisions only.
