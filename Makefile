@@ -15,5 +15,5 @@ test: ## Run repository invariant tests
 prerequisites: ## Verify Xcode CLT and install Homebrew if missing
 	./scripts/prerequisites.sh
 
-brew: ## Install missing Brewfile packages (no upgrade, no cleanup)
+brew: ## Install missing Brewfile packages (no proactive upgrade or cleanup)
 	./scripts/brew.sh

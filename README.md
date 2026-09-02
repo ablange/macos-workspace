@@ -34,18 +34,34 @@ M01 is implemented. The root `Brewfile` is the intentional software contract: a 
 - `make prerequisites` verifies Xcode Command Line Tools and installs Homebrew when it is missing.
 - `make brew` installs missing declared packages with `brew bundle install --no-upgrade`. It does not proactively upgrade existing Brewfile packages. Installing a missing package may still upgrade a dependency that package requires. It never runs `bundle cleanup`, `autoremove`, or `--force`.
 
-Homebrew Bundle attempts safe adoption of compatible existing applications; incompatible apps require manual migration (`brew install --cask --adopt <cask>`) and are never overwritten with `--force`. Adopting `docker-desktop` may cause Homebrew itself to request an admin password while relinking `/usr/local/bin` symlinks. Databricks trust is formula-scoped (`trusted: true` on `databricks/tap/databricks`) and recorded in `~/.homebrew/trust.json` by `brew bundle`. Application and cloud authentication stay manual.
+Homebrew Bundle attempts safe adoption of compatible existing applications; incompatible apps require manual migration (`brew install --cask --adopt <cask>`) and are never overwritten with `--force`. Adopting `docker-desktop` may cause Homebrew itself to request an admin password while relinking `/usr/local/bin` symlinks. Third-party trust is formula-scoped (`trusted: true` on `databricks/tap/databricks` and `astronomer/tap/astro`) and recorded in `~/.homebrew/trust.json` by `brew bundle`. Application and cloud authentication stay manual.
 
-The standalone Homebrew `docker` and `podman` formulae are not part of the intended contract. `astro` remains manual because its current Homebrew formula forces Podman ownership. Apps without a cask stay manual.
+The standalone Homebrew `docker` and `podman` formulae are not part of the intended contract. `astro` is declared from the Astronomer tap with `--without-podman` so Docker Desktop stays the sole container runtime. The Homebrew-core `astro` formula is omitted because it forces Podman. Apps without a cask stay manual.
 
 ## One-time migration — review before running
 
-These commands are **not** automated and **must not** be run as part of repository validation. Review them, then run them explicitly if you want this machine to match the M01 contract:
+These commands **change the Mac**. They are **not** automated and **must not** be run as part of repository validation. Review them, then run them explicitly if you want this machine to match the M01 contract.
+
+Before uninstalling, inspect what Homebrew thinks depends on the packages and what autoremove would drop:
 
 ```bash
-brew uninstall docker docker-completion
-brew uninstall astro podman
+brew uses --installed docker
+brew uses --installed podman
+brew autoremove --dry-run
+```
+
+Then migrate. `HOMEBREW_NO_AUTOREMOVE=1` keeps unused formula dependencies in place so they can be reviewed instead of removed automatically. `brew uninstall astro` removes the Homebrew-core formula (which pulls Podman); `make brew` then installs `astronomer/tap/astro` with `--without-podman`.
+
+```bash
+HOMEBREW_NO_AUTOREMOVE=1 brew uninstall docker docker-completion
+HOMEBREW_NO_AUTOREMOVE=1 brew uninstall astro podman
 make brew
+```
+
+After the uninstalls, inspect leftover dependencies again and decide whether any should actually go:
+
+```bash
+brew autoremove --dry-run
 ```
 
 Optional review (out of scope for `make brew`; do not automate):
@@ -88,7 +104,7 @@ Implemented:
 - `lint` — static checks
 - `test` — repository invariant tests
 - `prerequisites` — Xcode CLT and Homebrew
-- `brew` — `brew bundle` from the Brewfile (install missing packages; no upgrade, no cleanup)
+- `brew` — `brew bundle` from the Brewfile (install missing packages; no proactive upgrade or cleanup)
 
 Planned:
 

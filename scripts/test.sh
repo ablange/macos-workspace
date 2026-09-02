@@ -63,6 +63,18 @@ else
   pass "Brewfile omits standalone docker, docker-compose, and podman formulae"
 fi
 
+if grep -qE '^brew "astro"' Brewfile; then
+  fail "Brewfile must not declare the Homebrew-core astro formula"
+else
+  pass "Brewfile omits the Homebrew-core astro formula"
+fi
+
+if grep -qE '^brew "astronomer/tap/astro".*without-podman' Brewfile; then
+  pass "Brewfile declares astronomer/tap/astro without Podman"
+else
+  fail "Brewfile must declare astronomer/tap/astro with without-podman"
+fi
+
 # Forbidden prefix strings are split so this file is not a self-match.
 opt_home="/opt/home"
 usr_home="/usr/local/Home"

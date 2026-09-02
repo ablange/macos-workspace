@@ -22,6 +22,7 @@ brew "copier"
 # Data engineering
 brew "duckdb"
 brew "libpq"
+brew "astronomer/tap/astro", args: ["without-podman"], trusted: true
 
 # Cloud tooling
 brew "awscli"
