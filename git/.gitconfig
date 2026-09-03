@@ -1,0 +1,12 @@
+[alias]
+	s = status
+	d = diff
+	bs = branch
+	addall = add
+	com = commit
+[core]
+	editor = nano
+[init]
+	defaultBranch = main
+[include]
+	path = ~/.gitconfig.local

@@ -1,7 +1,7 @@
 .DEFAULT_GOAL := help
 SHELL := /bin/bash
 
-.PHONY: help lint test prerequisites brew git_pull
+.PHONY: help lint test prerequisites brew git_pull shell git
 
 help: ## Show available targets
 	@awk 'BEGIN {FS = ":.*## "}; /^[a-zA-Z0-9_-]+:.*## / {printf "  %-14s %s\n", $$1, $$2}' $(MAKEFILE_LIST)
@@ -20,3 +20,9 @@ brew: ## Install missing Brewfile packages (no proactive upgrade or cleanup)
 
 git_pull: ## Refresh local main after a PR merge
 	./scripts/git_pull.sh
+
+shell: ## Print the Bash source line to add; never edits ~/.bashrc
+	./scripts/shell.sh
+
+git: ## Add one idempotent include.path and link the global ignore file
+	./scripts/git.sh
