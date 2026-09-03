@@ -68,14 +68,42 @@ done <<EOF
 $(find scripts -type f -name '*.sh' -print)
 EOF
 
+run_shellcheck_sourced() {
+  local file="$1"
+
+  if [ "$shellcheck_available" -eq 0 ]; then
+    return 0
+  fi
+
+  # SC2001 is the preserved sed-based PROMPT_COMMAND normalize in 3-ps1.sh.
+  if ! shellcheck -s bash -e SC2001 "$file"; then
+    echo "lint: shellcheck failed: $file"
+    failures=$((failures + 1))
+  fi
+}
+
+if [ -d shell ]; then
+  while IFS= read -r file; do
+    [ -n "$file" ] || continue
+    if grep -nE 'set[[:space:]]+(-euo[[:space:]]+pipefail|-o[[:space:]]+pipefail|-e\b|-u\b)' "$file" >/dev/null; then
+      echo "lint: strict-mode flag in sourced shell file: $file"
+      failures=$((failures + 1))
+    fi
+  done <<EOF
+$(find shell -type f \( -name '*.sh' -o -name '.bashrc' -o -name '.bashrc.*' \) -print)
+EOF
+fi
+
 if [ -f shell/bash/.bashrc ]; then
   parse_sourced_fragment shell/bash/.bashrc
+  run_shellcheck_sourced shell/bash/.bashrc
 fi
 
 if [ -d shell/bash/.bashrc.d ]; then
   while IFS= read -r file; do
     [ -n "$file" ] || continue
     parse_sourced_fragment "$file"
+    run_shellcheck_sourced "$file"
   done <<EOF
 $(find shell/bash/.bashrc.d -type f -name '*.sh' -print)
 EOF

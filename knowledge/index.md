@@ -1,7 +1,7 @@
 ---
 title: Knowledge index
 status: active
-updated: 2026-09-01
+updated: 2026-09-02
 ---
 
 # Knowledge

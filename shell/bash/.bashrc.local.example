@@ -1,0 +1,5 @@
+# shell/bash/.bashrc.local.example
+# Copy to ~/.bashrc.local (git-ignored) and customize.
+
+# Bash command auto-complete (Homebrew)
+# [[ -r "$HOMEBREW_REPOSITORY/etc/profile.d/bash_completion.sh" ]] && . "$HOMEBREW_REPOSITORY/etc/profile.d/bash_completion.sh"

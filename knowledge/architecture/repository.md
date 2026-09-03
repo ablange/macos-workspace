@@ -12,9 +12,9 @@ updated: 2026-09-02
 | --- | --- |
 | `Makefile` | Human interface. Each target delegates to one script. |
 | `Brewfile` | Declarative package layer. Populated in M01. |
-| `scripts/` | Executable automation. `lint.sh`, `test.sh`, `prerequisites.sh`, `brew.sh`, and `git_pull.sh` exist today; later milestones add remaining installers and `doctor`. |
-| `shell/` | Sourced Bash configuration (later milestone). Never sets strict-mode flags. |
-| `git/` | Portable Git configuration (later milestone). |
+| `scripts/` | Executable automation. `lint.sh`, `test.sh`, `prerequisites.sh`, `brew.sh`, `git_pull.sh`, `shell.sh`, and `git.sh` exist today; later milestones add remaining installers and `doctor`. |
+| `shell/` | Sourced Bash configuration. `shell/bash/.bashrc` loads `shell/bash/.bashrc.d/{0-setup,1-git,2-pyenv,3-ps1}.sh` then `~/.bashrc.local`. Never sets strict-mode flags. |
+| `git/` | Portable Git configuration. `git/.gitconfig`, `git/.gitconfig.local.example`, and `git/ignore`. |
 | `docs/` | Manual setup that must not be automated (later milestone). |
 | `knowledge/` | Durable architecture and decisions. Does not copy the roadmap. |
 
@@ -26,9 +26,10 @@ Make is the entry point. Recipes contain no logic beyond invoking a script. Scri
 
 ## Ownership boundaries
 
-- **Repository:** tracked Brewfile, scripts, portable shell fragments, portable Git config, knowledge, and docs.
+- **Repository:** tracked Brewfile, scripts, portable shell fragments, portable Git config, `git/ignore`, knowledge, and docs.
 - **Machine-local files:** `~/.bashrc.local` and `~/.gitconfig.local` hold identity and host-specific values. They are not tracked.
 - **User files we do not replace:** `~/.bashrc` and `~/.gitconfig`. The user adds a `source` line; Git uses `[include]`.
+- **Linked ignore:** `git/ignore` (repository) is linked from `~/.config/git/ignore` (machine, symlink created only when absent).
 - **Manual steps:** brittle, proprietary, or security-sensitive setup stays in documentation.
 
 ## Constraints
@@ -39,7 +40,7 @@ Make is the entry point. Recipes contain no logic beyond invoking a script. Scri
 
 ## Eventual bootstrap sequence
 
-This sequence is the target architecture. `help`, `lint`, `test`, `prerequisites`, `brew`, and `git_pull` are implemented. `git_pull` is a convenience target, not part of bootstrap.
+This sequence is the target architecture. `help`, `lint`, `test`, `prerequisites`, `brew`, `shell`, `git`, and `git_pull` are implemented. `git_pull` is a convenience target, not part of bootstrap.
 
 ```mermaid
 flowchart LR

@@ -17,6 +17,8 @@ fail() {
 TMP_HOME="$(mktemp -d)"
 trap 'rm -rf "$TMP_HOME"' EXIT
 export HOME="$TMP_HOME"
+export XDG_CONFIG_HOME="$TMP_HOME/.config"
+REPO_ROOT="$(pwd)"
 
 required_files=(
   README.md
@@ -34,6 +36,18 @@ required_files=(
   scripts/prerequisites.sh
   scripts/brew.sh
   scripts/git_pull.sh
+  scripts/shell.sh
+  scripts/git.sh
+  shell/bash/.bashrc
+  shell/bash/.bashrc.local.example
+  shell/bash/.bashrc.d/0-setup.sh
+  shell/bash/.bashrc.d/1-git.sh
+  shell/bash/.bashrc.d/2-pyenv.sh
+  shell/bash/.bashrc.d/3-ps1.sh
+  git/.gitconfig
+  git/.gitconfig.local.example
+  git/ignore
+  knowledge/decisions/0003-shell-and-git-indirection.md
 )
 for file in "${required_files[@]}"; do
   if [ -e "$file" ]; then
@@ -121,10 +135,10 @@ fi
 opt_home="/opt/home"
 usr_home="/usr/local/Home"
 brew_suffix="brew"
-if grep -E "${opt_home}${brew_suffix}|${usr_home}${brew_suffix}" Makefile Brewfile scripts/*.sh >/dev/null; then
-  fail "hard-coded Homebrew prefix in Makefile, Brewfile, or scripts"
+if grep -RE "${opt_home}${brew_suffix}|${usr_home}${brew_suffix}" Makefile Brewfile scripts shell git >/dev/null; then
+  fail "hard-coded Homebrew prefix in Makefile, Brewfile, scripts, shell, or git"
 else
-  pass "no hard-coded Homebrew prefix in Makefile, Brewfile, or scripts"
+  pass "no hard-coded Homebrew prefix in Makefile, Brewfile, scripts, shell, or git"
 fi
 
 if grep -E 'bundle cleanup|autoremove|--force|--adopt' scripts/brew.sh >/dev/null; then
@@ -225,6 +239,396 @@ if [ -d knowledge ]; then
   done <<EOF
 $(find knowledge -type f -name '*.md' -print)
 EOF
+fi
+
+tree_checksum() {
+  local dir="$1"
+  (
+    cd "$dir" || exit 1
+    find . -print | LC_ALL=C sort | while IFS= read -r path; do
+      if [ -L "$path" ]; then
+        printf 'symlink %s -> %s\n' "$path" "$(readlink "$path")"
+      elif [ -f "$path" ]; then
+        cksum "$path"
+      else
+        printf 'path %s\n' "$path"
+      fi
+    done
+  )
+}
+
+with_git_env() {
+  local work="$1"
+  shift
+  HOME="$work" \
+    XDG_CONFIG_HOME="$work/.config" \
+    GIT_CONFIG_GLOBAL="$work/.gitconfig" \
+    GIT_CONFIG_SYSTEM="$work/system-gitconfig" \
+    "$@"
+}
+
+if git ls-files --cached --others --exclude-standard | grep -Fxq 'shell/bash/.bashrc.local.example'; then
+  pass "shell/bash/.bashrc.local.example is tracked or committable"
+else
+  fail "shell/bash/.bashrc.local.example must be tracked"
+fi
+
+if git ls-files --cached --others --exclude-standard | grep -Fxq 'git/.gitconfig.local.example'; then
+  pass "git/.gitconfig.local.example is tracked or committable"
+else
+  fail "git/.gitconfig.local.example must be tracked"
+fi
+
+if git check-ignore -q shell/bash/.bashrc.local; then
+  pass "git check-ignore matches shell/bash/.bashrc.local"
+else
+  fail "shell/bash/.bashrc.local must be gitignored"
+fi
+
+if git check-ignore -q git/.gitconfig.local; then
+  pass "git check-ignore matches git/.gitconfig.local"
+else
+  fail "git/.gitconfig.local must be gitignored"
+fi
+
+if grep -RE 'set[[:space:]]+(-euo[[:space:]]+pipefail|-o[[:space:]]+pipefail|-e\b|-u\b)' shell >/dev/null; then
+  fail "shell/ must not enable strict mode"
+else
+  pass "shell/ does not enable strict mode"
+fi
+
+if grep -R '/Users/' shell git scripts/shell.sh scripts/git.sh >/dev/null; then
+  fail "personal /Users/ path in shell/, git/, scripts/shell.sh, or scripts/git.sh"
+else
+  pass "no /Users/ path in shell/, git/, scripts/shell.sh, or scripts/git.sh"
+fi
+
+# Literal include path as written in git/.gitconfig, not an expansion.
+# shellcheck disable=SC2088
+local_include='~/.gitconfig.local'
+if grep -Fq "$local_include" git/.gitconfig; then
+  pass "git/.gitconfig includes ~/.gitconfig.local"
+else
+  fail "git/.gitconfig must include ~/.gitconfig.local"
+fi
+
+if [ -s git/ignore ]; then
+  pass "git/ignore is non-empty"
+else
+  fail "git/ignore must be non-empty"
+fi
+
+if git config --file git/.gitconfig --list >/dev/null; then
+  pass "git/.gitconfig parses"
+else
+  fail "git/.gitconfig failed to parse"
+fi
+
+if git config --file git/.gitconfig --get-regexp '^user\.' >/dev/null 2>&1; then
+  fail "git/.gitconfig must not set user.*"
+else
+  pass "git/.gitconfig has no user.*"
+fi
+
+if git config --file git/.gitconfig --get-regexp '^credential\.' >/dev/null 2>&1; then
+  fail "git/.gitconfig must not set credential.*"
+else
+  pass "git/.gitconfig has no credential.*"
+fi
+
+if make -n shell | grep -Eq '^[[:space:]]*\./scripts/shell\.sh$'; then
+  pass "Makefile shell recipe is ./scripts/shell.sh"
+else
+  fail "Makefile shell recipe must be a single ./scripts/shell.sh line"
+fi
+
+if make -n git | grep -Eq '^[[:space:]]*\./scripts/git\.sh$'; then
+  pass "Makefile git recipe is ./scripts/git.sh"
+else
+  fail "Makefile git recipe must be a single ./scripts/git.sh line"
+fi
+
+if grep -E -- '--unset|--replace-all|ln -sf|(^|[[:space:]])rm([[:space:]]|$)' scripts/git.sh >/dev/null; then
+  fail "scripts/git.sh must not use --unset, --replace-all, ln -sf, or rm"
+else
+  pass "scripts/git.sh has no --unset, --replace-all, ln -sf, or rm"
+fi
+
+run_sandbox_shell() {
+  local work="$1"
+  local script="$2"
+  env -i HOME="$work" PATH=/usr/bin:/bin:/usr/sbin:/sbin TERM=dumb /bin/bash --noprofile --norc -c "$script"
+}
+
+work="$(mktemp -d "$TMP_HOME/load-basic.XXXXXX")"
+if run_sandbox_shell "$work" "source \"$REPO_ROOT/shell/bash/.bashrc\" && alias ll gs >/dev/null && type set_prompt >/dev/null && case \"\$PROMPT_COMMAND\" in *set_prompt*) ;; *) exit 1;; esac"; then
+  pass "temp-HOME shell load defines aliases, set_prompt, and PROMPT_COMMAND"
+else
+  fail "temp-HOME shell load failed"
+fi
+
+work="$(mktemp -d "$TMP_HOME/load-local.XXXXXX")"
+cat > "$work/.bashrc.local" <<'EOF'
+BASHRC_LOCAL_MARKER=1
+alias ll='echo local-ll'
+EOF
+if run_sandbox_shell "$work" "source \"$REPO_ROOT/shell/bash/.bashrc\" && [ \"\$BASHRC_LOCAL_MARKER\" = 1 ] && alias ll | grep -q local-ll"; then
+  pass "temp-HOME ~/.bashrc.local is sourced last and can override ll"
+else
+  fail "temp-HOME ~/.bashrc.local last-wins failed"
+fi
+
+work="$(mktemp -d "$TMP_HOME/load-idempotent.XXXXXX")"
+mkdir -p "$work/.pyenv/bin"
+if run_sandbox_shell "$work" "
+  source \"$REPO_ROOT/shell/bash/.bashrc\"
+  source \"$REPO_ROOT/shell/bash/.bashrc\"
+  n=\$(printf '%s' \"\$PROMPT_COMMAND\" | grep -o set_prompt | wc -l | tr -d ' ')
+  [ \"\$n\" = 1 ] || exit 1
+  n=0
+  oldifs=\$IFS
+  IFS=:
+  for entry in \$PATH; do
+    if [ \"\$entry\" = \"\$HOME/.pyenv/bin\" ]; then
+      n=\$((n + 1))
+    fi
+  done
+  IFS=\$oldifs
+  [ \"\$n\" = 1 ]
+"; then
+  pass "re-sourcing does not duplicate set_prompt or PYENV_ROOT/bin"
+else
+  fail "re-sourcing duplicated set_prompt or PYENV_ROOT/bin"
+fi
+
+work="$(mktemp -d "$TMP_HOME/load-prompt.XXXXXX")"
+err="$work/set_prompt.err"
+if run_sandbox_shell "$work" "source \"$REPO_ROOT/shell/bash/.bashrc\" && set_prompt" 2>"$err" && [ ! -s "$err" ]; then
+  pass "set_prompt is silent without pyenv or git-prompt"
+else
+  fail "set_prompt wrote stderr or failed without pyenv or git-prompt"
+fi
+
+work="$(mktemp -d "$TMP_HOME/git-fresh.XXXXXX")"
+status=0
+out="$(with_git_env "$work" ./scripts/git.sh 2>&1)" || status=$?
+if [ "$status" -eq 0 ]; then
+  pass "git.sh fresh run 1 exits 0"
+else
+  fail "git.sh fresh run 1 exited $status"
+fi
+sum1="$(tree_checksum "$work")"
+status=0
+out="$(with_git_env "$work" ./scripts/git.sh 2>&1)" || status=$?
+if [ "$status" -eq 0 ]; then
+  pass "git.sh fresh run 2 exits 0"
+else
+  fail "git.sh fresh run 2 exited $status"
+fi
+sum2="$(tree_checksum "$work")"
+if [ "$sum1" = "$sum2" ]; then
+  pass "git.sh second run writes nothing"
+else
+  fail "git.sh second run changed the temp HOME tree"
+fi
+
+include_count="$(with_git_env "$work" git config --global --get-all include.path 2>/dev/null | wc -l | tr -d ' ')"
+if [ "$include_count" = 1 ]; then
+  pass "git.sh fresh include.path has exactly one value"
+else
+  fail "git.sh fresh include.path count is $include_count"
+fi
+
+if [ "$(readlink "$work/.config/git/ignore")" = "$REPO_ROOT/git/ignore" ]; then
+  pass "git.sh links XDG git/ignore to the repository file"
+else
+  fail "git.sh did not link XDG git/ignore to $REPO_ROOT/git/ignore"
+fi
+
+if [ "$(with_git_env "$work" git config --global --includes --get alias.bs)" = "branch" ]; then
+  pass "git.sh alias.bs resolves to branch via --includes"
+else
+  fail "git.sh alias.bs did not resolve to branch"
+fi
+
+if with_git_env "$work" git config --global --includes --get core.excludesfile >/dev/null 2>&1; then
+  fail "git.sh must not write core.excludesfile"
+else
+  pass "git.sh leaves core.excludesfile unset"
+fi
+
+ignore_repo="$(mktemp -d "$TMP_HOME/ignore-repo.XXXXXX")"
+empty_template="$(mktemp -d "$TMP_HOME/git-template.XXXXXX")"
+status=0
+(
+  cd "$ignore_repo" || exit 1
+  with_git_env "$work" git init --template="$empty_template" >/dev/null
+  touch .DS_Store
+  with_git_env "$work" git check-ignore -q .DS_Store
+) || status=$?
+if [ "$status" -eq 0 ]; then
+  pass "git check-ignore matches .DS_Store via XDG ignore"
+else
+  fail "git check-ignore did not match .DS_Store"
+fi
+
+work="$(mktemp -d "$TMP_HOME/git-protect.XXXXXX")"
+mkdir -p "$work/.config/git"
+printf '%s\n' '[user]' '	name = Example' > "$work/.gitconfig"
+printf '%s\n' 'keep-this-marker' > "$work/.config/git/ignore"
+status=0
+out="$(with_git_env "$work" ./scripts/git.sh 2>&1)" || status=$?
+if [ "$status" -eq 0 ]; then
+  pass "git.sh protect-existing exits 0"
+else
+  fail "git.sh protect-existing exited $status"
+fi
+if [ "$(with_git_env "$work" git config --global --includes --get user.name)" = "Example" ]; then
+  pass "git.sh preserves existing user.name"
+else
+  fail "git.sh changed existing user.name"
+fi
+if [ -L "$work/.config/git/ignore" ]; then
+  fail "git.sh replaced an existing ignore file with a symlink"
+elif [ -f "$work/.config/git/ignore" ] && grep -Fxq 'keep-this-marker' "$work/.config/git/ignore"; then
+  pass "git.sh left the existing ignore file in place"
+else
+  fail "git.sh mutated the existing ignore file"
+fi
+if printf '%s\n' "$out" | grep -Fq "$work/.config/git/ignore"; then
+  pass "git.sh reports the existing ignore path"
+else
+  fail "git.sh did not mention the existing ignore path"
+fi
+
+work="$(mktemp -d "$TMP_HOME/git-excludes-global.XXXXXX")"
+printf '%s\n' '[core]' '	excludesfile = ~/other' > "$work/.gitconfig"
+status=0
+out="$(with_git_env "$work" ./scripts/git.sh 2>&1)" || status=$?
+if [ "$status" -eq 0 ]; then
+  pass "git.sh global-excludesFile exits 0"
+else
+  fail "git.sh global-excludesFile exited $status"
+fi
+# Compare to the literal core.excludesfile value written above.
+# shellcheck disable=SC2088
+expected_excludes='~/other'
+if [ "$(with_git_env "$work" git config --global --get core.excludesfile)" = "$expected_excludes" ]; then
+  pass "git.sh leaves global core.excludesFile unchanged"
+else
+  fail "git.sh changed global core.excludesFile"
+fi
+if printf '%s\n' "$out" | grep -q 'core.excludesFile is set'; then
+  pass "git.sh reports a set global core.excludesFile"
+else
+  fail "git.sh did not report a set global core.excludesFile"
+fi
+if [ ! -e "$work/.config/git/ignore" ] && [ ! -L "$work/.config/git/ignore" ]; then
+  pass "git.sh skips the ignore symlink when global core.excludesFile is set"
+else
+  fail "git.sh created an ignore path while core.excludesFile is set"
+fi
+
+work="$(mktemp -d "$TMP_HOME/git-excludes-system.XXXXXX")"
+printf '%s\n' '[core]' '	excludesfile = ~/other' > "$work/system-gitconfig"
+status=0
+out="$(with_git_env "$work" ./scripts/git.sh 2>&1)" || status=$?
+if [ "$status" -eq 0 ]; then
+  pass "git.sh system-excludesFile exits 0"
+else
+  fail "git.sh system-excludesFile exited $status"
+fi
+# Compare to the literal core.excludesfile value written above.
+# shellcheck disable=SC2088
+expected_excludes='~/other'
+if [ "$(with_git_env "$work" git config --system --includes --get core.excludesfile)" = "$expected_excludes" ]; then
+  pass "git.sh leaves system core.excludesFile unchanged"
+else
+  fail "git.sh changed system core.excludesFile"
+fi
+if printf '%s\n' "$out" | grep -q 'core.excludesFile is set'; then
+  pass "git.sh reports a set system core.excludesFile"
+else
+  fail "git.sh did not report a set system core.excludesFile"
+fi
+if [ ! -e "$work/.config/git/ignore" ] && [ ! -L "$work/.config/git/ignore" ]; then
+  pass "git.sh skips the ignore symlink when system core.excludesFile is set"
+else
+  fail "git.sh created an ignore path while system core.excludesFile is set"
+fi
+
+work="$(mktemp -d "$TMP_HOME/git-stale.XXXXXX")"
+printf '%s\n' '[include]' '	path = /old/path/macos-workspace/git/.gitconfig' > "$work/.gitconfig"
+status=0
+out="$(with_git_env "$work" ./scripts/git.sh 2>&1)" || status=$?
+if [ "$status" -ne 0 ]; then
+  pass "git.sh stale-include exits non-zero"
+else
+  fail "git.sh stale-include exited 0"
+fi
+if printf '%s\n' "$out" | grep -Fq '/old/path/macos-workspace/git/.gitconfig' &&
+  printf '%s\n' "$out" | grep -Fq "$REPO_ROOT/git/.gitconfig"; then
+  pass "git.sh stale-include reports the old and new paths"
+else
+  fail "git.sh stale-include did not report both include paths"
+fi
+include_count="$(with_git_env "$work" git config --global --get-all include.path 2>/dev/null | wc -l | tr -d ' ')"
+if [ "$include_count" = 1 ]; then
+  pass "git.sh stale-include does not add or remove include.path"
+else
+  fail "git.sh stale-include changed include.path count to $include_count"
+fi
+
+work="$(mktemp -d "$TMP_HOME/shell-missing.XXXXXX")"
+before="$(tree_checksum "$work")"
+status=0
+out="$(HOME="$work" ./scripts/shell.sh 2>&1)" || status=$?
+after="$(tree_checksum "$work")"
+if [ "$status" -eq 0 ] && printf '%s\n' "$out" | grep -q 'source "' && printf '%s\n' "$out" | grep -q 'shell/bash/.bashrc'; then
+  pass "shell.sh prints the source line and exits 0 when ~/.bashrc is missing"
+else
+  fail "shell.sh missing-line report failed"
+fi
+if [ "$before" = "$after" ]; then
+  pass "shell.sh missing-line run does not write under HOME"
+else
+  fail "shell.sh missing-line run changed the temp HOME tree"
+fi
+
+work="$(mktemp -d "$TMP_HOME/shell-present.XXXXXX")"
+printf '%s\n' "source \"$REPO_ROOT/shell/bash/.bashrc\"" > "$work/.bashrc"
+printf '%s\n' 'source ~/.bashrc' > "$work/.bash_profile"
+before="$(tree_checksum "$work")"
+status=0
+out="$(HOME="$work" ./scripts/shell.sh 2>&1)" || status=$?
+after="$(tree_checksum "$work")"
+if [ "$status" -eq 0 ] && printf '%s\n' "$out" | grep -q 'sources'; then
+  pass "shell.sh reports when ~/.bashrc already sources the clone"
+else
+  fail "shell.sh present-line report failed"
+fi
+if [ "$before" = "$after" ]; then
+  pass "shell.sh present-line run does not write under HOME"
+else
+  fail "shell.sh present-line run changed the temp HOME tree"
+fi
+
+work="$(mktemp -d "$TMP_HOME/shell-warning.XXXXXX")"
+printf '%s\n' "source \"$REPO_ROOT/shell/bash/.bashrc\"" > "$work/.bashrc"
+printf '%s\n' '# login profile without bashrc' > "$work/.bash_profile"
+before="$(tree_checksum "$work")"
+status=0
+out="$(HOME="$work" ./scripts/shell.sh 2>&1)" || status=$?
+after="$(tree_checksum "$work")"
+if [ "$status" -eq 0 ] && printf '%s\n' "$out" | grep -q 'warning'; then
+  pass "shell.sh warns when ~/.bash_profile does not source ~/.bashrc"
+else
+  fail "shell.sh bash_profile warning failed"
+fi
+if [ "$before" = "$after" ]; then
+  pass "shell.sh warning run does not write under HOME"
+else
+  fail "shell.sh warning run changed the temp HOME tree"
 fi
 
 if [ "$failures" -ne 0 ]; then
