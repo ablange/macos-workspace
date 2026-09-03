@@ -430,6 +430,30 @@ else
   fail "PROMPT_COMMAND history -a registration failed"
 fi
 
+work="$(mktemp -d "$TMP_HOME/load-prompt-trailing.XXXXXX")"
+if run_sandbox_shell "$work" "
+  PROMPT_COMMAND='history -a; '
+  source \"$REPO_ROOT/shell/bash/.bashrc\"
+  source \"$REPO_ROOT/shell/bash/.bashrc\"
+  [ \"\$PROMPT_COMMAND\" = 'history -a;set_prompt' ] || exit 1
+"; then
+  pass "PROMPT_COMMAND history -a; with trailing space stays valid and registers once"
+else
+  fail "PROMPT_COMMAND trailing-space registration failed"
+fi
+
+work="$(mktemp -d "$TMP_HOME/load-prompt-reset.XXXXXX")"
+if run_sandbox_shell "$work" "
+  PROMPT_COMMAND='reset_prompt'
+  source \"$REPO_ROOT/shell/bash/.bashrc\"
+  source \"$REPO_ROOT/shell/bash/.bashrc\"
+  [ \"\$PROMPT_COMMAND\" = 'reset_prompt;set_prompt' ] || exit 1
+"; then
+  pass "PROMPT_COMMAND reset_prompt is not treated as set_prompt"
+else
+  fail "PROMPT_COMMAND reset_prompt substring blocked set_prompt"
+fi
+
 work="$(mktemp -d "$TMP_HOME/load-clt-helpers.XXXXXX")"
 clt_root="$(xcode-select -p 2>/dev/null || true)"
 if [ -n "$clt_root" ] && [ -f "$clt_root/usr/share/git-core/git-prompt.sh" ]; then

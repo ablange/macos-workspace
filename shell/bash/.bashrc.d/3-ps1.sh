@@ -36,17 +36,49 @@ set_prompt() {
     PS1+=')\n\[\e[0m\]\$ '
 }
 
-case "$PROMPT_COMMAND" in
-    *set_prompt*) ;;
-    '')
+_pc_has_set_prompt=0
+_pc_rest="$PROMPT_COMMAND"
+_pc_more=1
+while [ "$_pc_more" -eq 1 ]; do
+    case "$_pc_rest" in
+        *';'*)
+            _pc_cmd="${_pc_rest%%;*}"
+            _pc_rest="${_pc_rest#*;}"
+            ;;
+        *)
+            _pc_cmd="$_pc_rest"
+            _pc_rest=""
+            _pc_more=0
+            ;;
+    esac
+    _pc_cmd="${_pc_cmd#"${_pc_cmd%%[![:space:]]*}"}"
+    _pc_cmd="${_pc_cmd%"${_pc_cmd##*[![:space:]]}"}"
+    if [ "$_pc_cmd" = "set_prompt" ]; then
+        _pc_has_set_prompt=1
+        break
+    fi
+done
+
+if [ "$_pc_has_set_prompt" -eq 0 ]; then
+    _pc="$PROMPT_COMMAND"
+    _pc="${_pc%"${_pc##*[![:space:]]}"}"
+    while :; do
+        case "$_pc" in
+            *';')
+                _pc="${_pc%;}"
+                _pc="${_pc%"${_pc##*[![:space:]]}"}"
+                ;;
+            *)
+                break
+                ;;
+        esac
+    done
+    if [ -n "$_pc" ]; then
+        PROMPT_COMMAND="${_pc};set_prompt"
+    else
         PROMPT_COMMAND="set_prompt"
-        ;;
-    *';')
-        PROMPT_COMMAND="${PROMPT_COMMAND}set_prompt"
-        ;;
-    *)
-        PROMPT_COMMAND="${PROMPT_COMMAND};set_prompt"
-        ;;
-esac
+    fi
+fi
+unset _pc_has_set_prompt _pc_rest _pc_more _pc_cmd _pc
 
 set_prompt
