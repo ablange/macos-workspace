@@ -104,7 +104,19 @@ Global ignore patterns live in `git/ignore` (OS and editor files only). `make gi
 
 ## Python
 
-pyenv owns Python versions. Homebrew does not install or manage Python for this workstation.
+M03 is implemented. pyenv owns Python interpreters. Homebrew does not install or manage Python for this workstation. The baseline interpreter is the version in `python/version`. `make python` installs that version if it is missing and sets `pyenv global`. It never uninstalls versions, upgrades other interpreters, installs packages, creates virtualenvs, or edits shell files.
+
+Projects own their own environments. Dagster and other project tooling stay project-local.
+
+pipx is a Brewfile package. Apps it installs land in `~/.local/bin`. `shell/bash/.bashrc.d/0-setup.sh` adds that directory to `PATH`. `make python` does not run `pipx ensurepath`.
+
+Verify after a new login shell:
+
+```bash
+pyenv version
+python --version
+command -v pipx
+```
 
 ## macOS defaults
 
@@ -126,10 +138,10 @@ Implemented:
 - `git_pull` — checkout `main`, pull `origin main`, then prune remote-tracking refs (`git fetch -p`)
 - `shell` — print the Bash `source` line; exit 0 when it is merely missing; never edit `~/.bashrc`
 - `git` — one idempotent `include.path` plus the global-ignore symlink
+- `python` — install the pinned pyenv Python if missing and set `pyenv global`
 
 Planned:
 
-- `python` — pyenv default version and `pipx ensurepath`
 - `macos` — curated, reversible defaults
 - `bootstrap` — run the above in order, then `doctor`
 - `doctor` — report-only drift checks
@@ -141,21 +153,22 @@ Planned:
 2. Confirm `make help`, `make lint`, and `make test` succeed.
 3. Run `make prerequisites`, then `make brew`.
 4. Run `make shell`, add the printed line to `~/.bashrc`, then run `make git`.
-5. Complete documented manual steps (auth, apps without a cask, GUI preferences).
+5. Open a new shell, then run `make python`.
+6. Complete documented manual steps (auth, apps without a cask, GUI preferences).
 
 ## One-time migration — shell and Git
 
 These steps **change the Mac**. They are **not** automated and **must not** be run as part of repository validation.
 
-1. In `~/.bashrc`, replace a `mini-data-stack-hedge-fund/shell/bash/.bashrc` source line with the macos-workspace line printed by `make shell`. Keep `export PATH="$HOME/.local/bin:$PATH"` in `~/.bashrc` if it is already there; no fragment provides it.
+1. In `~/.bashrc`, replace a `mini-data-stack-hedge-fund/shell/bash/.bashrc` source line with the macos-workspace line printed by `make shell`. The `export PATH="$HOME/.local/bin:$PATH"` line in `~/.bashrc` is now redundant (`0-setup.sh` provides it) and may be removed.
 2. In `~/.bash_profile`, keep `brew shellenv`, the Homebrew bash-completion line, and `source ~/.bashrc`. The `pyenv init` and `pyenv virtualenv-init` lines duplicate `2-pyenv.sh`; removing them is optional and eliminates duplicate shim paths on `PATH`.
 3. `~/.git-completion.bash` and `~/.git-prompt.sh` are optional. After Command Line Tools are installed, the fragments load the CLT copies. Keep the home files only as a fallback, or remove them once a new login shell defines `__git_ps1`.
 4. If an in-repo `mini-data-stack-hedge-fund/shell/bash/.bashrc.local` exists, copy its contents to `~/.bashrc.local` by hand.
 5. After `make git`, the repository supplies `alias.*` and `core.editor`. You may delete the accumulated `[alias]` block and a stray `[core] editor` from `~/.gitconfig` (for example `git config --global --unset-all alias.bs`), then verify with `git config --get-all alias.bs` (expect one value). Optionally move `[user]` into `~/.gitconfig.local`. Leave credential sections where they are.
 6. If this clone is ever moved, `make git` reports the stale include and a dangling `~/.config/git/ignore`. Remove them by hand (`git config --global --unset include.path '<old path>'`, then `rm ~/.config/git/ignore` after `readlink` confirms it is the dangling link), update the `~/.bashrc` source line, and rerun `make shell` and `make git`. This is never automated.
 
-Pre-existing and out of scope: Nix profile `PATH` entries; `~/.pyenv/version` and interpreters (M03).
+Pre-existing and out of scope: Nix profile `PATH` entries. `~/.pyenv/version` and interpreters are machine state written by pyenv via `make python`.
 
 ## Roadmap
 
-M00 (Repository Foundation), M01 (Homebrew Workstation Baseline), and M02 (Shell and Git Environment) are what this tree implements. M03 (Python) is next. The authoritative roadmap lives outside this repository; knowledge files record durable architecture and decisions only.
+M00 (Repository Foundation), M01 (Homebrew Workstation Baseline), M02 (Shell and Git Environment), and M03 (Python Workstation Standard) are what this tree implements. Later milestones remain. The authoritative roadmap lives outside this repository; knowledge files record durable architecture and decisions only.

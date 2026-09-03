@@ -38,6 +38,8 @@ required_files=(
   scripts/git_pull.sh
   scripts/shell.sh
   scripts/git.sh
+  scripts/python.sh
+  python/version
   shell/bash/.bashrc
   shell/bash/.bashrc.local.example
   shell/bash/.bashrc.d/0-setup.sh
@@ -188,6 +190,15 @@ else
   pass "scripts/test.sh does not invoke Homebrew"
 fi
 
+# Command tokens are split so this file is not a self-match.
+mgr_py="pyenv"
+mgr_px="pipx"
+if grep -E "(^|[[:space:]])(${mgr_py}|${mgr_px})[[:space:]]" scripts/test.sh >/dev/null; then
+  fail "scripts/test.sh must not invoke the workstation ${mgr_py}/${mgr_px} binaries"
+else
+  pass "scripts/test.sh does not invoke the workstation ${mgr_py}/${mgr_px} binaries"
+fi
+
 while IFS= read -r file; do
   [ -n "$file" ] || continue
   if [ -x "$file" ]; then
@@ -297,10 +308,10 @@ else
   pass "shell/ does not enable strict mode"
 fi
 
-if grep -R '/Users/' shell git scripts/shell.sh scripts/git.sh >/dev/null; then
-  fail "personal /Users/ path in shell/, git/, scripts/shell.sh, or scripts/git.sh"
+if grep -R '/Users/' shell git scripts/shell.sh scripts/git.sh scripts/python.sh >/dev/null; then
+  fail "personal /Users/ path in shell/, git/, scripts/shell.sh, scripts/git.sh, or scripts/python.sh"
 else
-  pass "no /Users/ path in shell/, git/, scripts/shell.sh, or scripts/git.sh"
+  pass "no /Users/ path in shell/, git/, scripts/shell.sh, scripts/git.sh, or scripts/python.sh"
 fi
 
 if grep -RE '/Library/Developer/CommandLineTools|/Applications/Xcode\.app' shell scripts/shell.sh scripts/git.sh >/dev/null; then
@@ -354,6 +365,35 @@ else
   fail "Makefile git recipe must be a single ./scripts/git.sh line"
 fi
 
+if make -n python | grep -Eq '^[[:space:]]*\./scripts/python\.sh$'; then
+  pass "Makefile python recipe is ./scripts/python.sh"
+else
+  fail "Makefile python recipe must be a single ./scripts/python.sh line"
+fi
+
+pyenv_tok="pyenv"
+if grep -E "^[[:space:]]+${pyenv_tok}[[:space:]]" Makefile >/dev/null; then
+  fail "Makefile must not invoke ${pyenv_tok}; delegate to a script"
+else
+  pass "Makefile does not invoke ${pyenv_tok}"
+fi
+
+if [ "$(wc -l < python/version | tr -d ' ')" = "1" ] && grep -qxE '^[0-9]+\.[0-9]+\.[0-9]+$' python/version; then
+  pass "python/version is a single X.Y.Z line"
+else
+  fail "python/version must be one X.Y.Z line"
+fi
+
+forbid_un="uninstall"
+forbid_px_path="pipx"" ensurepath"
+forbid_pip="pip"" install"
+forbid_px_inst="pipx"" install"
+if grep -E "${forbid_un}|${forbid_px_path}|${forbid_pip}|${forbid_px_inst}" scripts/python.sh >/dev/null; then
+  fail "scripts/python.sh must not uninstall or install packages"
+else
+  pass "scripts/python.sh does not uninstall or install packages"
+fi
+
 if grep -E -- '--unset|--replace-all|ln -sf|(^|[[:space:]])rm([[:space:]]|$)' scripts/git.sh >/dev/null; then
   fail "scripts/git.sh must not use --unset, --replace-all, ln -sf, or rm"
 else
@@ -401,19 +441,29 @@ if run_sandbox_shell "$work" "
     fi
   done
   IFS=\$oldifs
+  [ \"\$n\" = 1 ] || exit 1
+  n=0
+  oldifs=\$IFS
+  IFS=:
+  for entry in \$PATH; do
+    if [ \"\$entry\" = \"\$HOME/.local/bin\" ]; then
+      n=\$((n + 1))
+    fi
+  done
+  IFS=\$oldifs
   [ \"\$n\" = 1 ]
 "; then
-  pass "re-sourcing does not duplicate set_prompt or PYENV_ROOT/bin"
+  pass "re-sourcing does not duplicate set_prompt, PYENV_ROOT/bin, or .local/bin"
 else
-  fail "re-sourcing duplicated set_prompt or PYENV_ROOT/bin"
+  fail "re-sourcing duplicated set_prompt, PYENV_ROOT/bin, or .local/bin"
 fi
 
 work="$(mktemp -d "$TMP_HOME/load-prompt.XXXXXX")"
 err="$work/set_prompt.err"
 if run_sandbox_shell "$work" "source \"$REPO_ROOT/shell/bash/.bashrc\" && set_prompt" 2>"$err" && [ ! -s "$err" ]; then
-  pass "set_prompt is silent without pyenv or git-prompt"
+  pass "set_prompt is silent without a version manager or git-prompt"
 else
-  fail "set_prompt wrote stderr or failed without pyenv or git-prompt"
+  fail "set_prompt wrote stderr or failed without a version manager or git-prompt"
 fi
 
 work="$(mktemp -d "$TMP_HOME/load-prompt-command.XXXXXX")"
@@ -822,6 +872,167 @@ if [ "$before" = "$after" ]; then
   pass "shell.sh dot-profile run does not write under HOME"
 else
   fail "shell.sh dot-profile run changed the temp HOME tree"
+fi
+
+install_fake_pyenv() {
+  local work="$1"
+  mkdir -p "$work/bin" "$work/.pyenv"
+  cat > "$work/bin/pyenv" <<'EOF'
+#!/bin/sh
+root="${PYENV_ROOT:-$HOME/.pyenv}"
+cmd="$1"
+shift
+case "$cmd" in
+  root)
+    printf '%s\n' "$root"
+    ;;
+  prefix)
+    printf '%s\n' "$root/versions/$1"
+    ;;
+  global)
+    if [ -n "${1:-}" ]; then
+      printf '%s\n' "$1" > "$root/version"
+    elif [ -f "$root/version" ]; then
+      cat "$root/version"
+    else
+      printf '%s\n' "system"
+    fi
+    ;;
+  install)
+    version=""
+    for arg in "$@"; do
+      case "$arg" in
+        --skip-existing) ;;
+        *) version="$arg" ;;
+      esac
+    done
+    mkdir -p "$root/versions/$version/bin"
+    printf '%s\n' "#!/bin/sh" "echo Python $version" > "$root/versions/$version/bin/python"
+    chmod +x "$root/versions/$version/bin/python"
+    ;;
+esac
+EOF
+  chmod +x "$work/bin/pyenv"
+}
+
+install_fake_pipx() {
+  local work="$1"
+  mkdir -p "$work/bin"
+  printf '%s\n' '#!/bin/sh' 'exit 0' > "$work/bin/pipx"
+  chmod +x "$work/bin/pipx"
+}
+
+run_python_sh() {
+  local work="$1"
+  env -i HOME="$work" PATH="$work/bin:/usr/bin:/bin" PYENV_ROOT="$work/.pyenv" ./scripts/python.sh
+}
+
+pin="$(tr -d '[:space:]' < python/version)"
+
+work="$(mktemp -d "$TMP_HOME/python-missing-mgr.XXXXXX")"
+before="$(tree_checksum "$work")"
+status=0
+out="$(env -i HOME="$work" PATH="/usr/bin:/bin" PYENV_ROOT="$work/.pyenv" ./scripts/python.sh 2>&1)" || status=$?
+after="$(tree_checksum "$work")"
+if [ "$status" -ne 0 ] && printf '%s\n' "$out" | grep -q 'make brew'; then
+  pass "python.sh missing manager exits 1 and names make brew"
+else
+  fail "python.sh missing manager did not fail as expected"
+fi
+if [ "$before" = "$after" ]; then
+  pass "python.sh missing manager does not write under HOME"
+else
+  fail "python.sh missing manager changed the temp HOME tree"
+fi
+
+work="$(mktemp -d "$TMP_HOME/python-missing-px.XXXXXX")"
+install_fake_pyenv "$work"
+before="$(tree_checksum "$work")"
+status=0
+out="$(run_python_sh "$work" 2>&1)" || status=$?
+after="$(tree_checksum "$work")"
+if [ "$status" -ne 0 ] && printf '%s\n' "$out" | grep -q "${mgr_px}" && printf '%s\n' "$out" | grep -q 'make brew'; then
+  pass "python.sh missing ${mgr_px} exits 1 and names make brew"
+else
+  fail "python.sh missing ${mgr_px} did not fail as expected"
+fi
+if [ "$before" = "$after" ]; then
+  pass "python.sh missing ${mgr_px} does not write under HOME"
+else
+  fail "python.sh missing ${mgr_px} changed the temp HOME tree"
+fi
+
+work="$(mktemp -d "$TMP_HOME/python-fresh.XXXXXX")"
+install_fake_pyenv "$work"
+install_fake_pipx "$work"
+status=0
+out="$(run_python_sh "$work" 2>&1)" || status=$?
+if [ "$status" -eq 0 ] &&
+  printf '%s\n' "$out" | grep -q 'Installing' &&
+  printf '%s\n' "$out" | grep -q 'Setting global' &&
+  printf '%s\n' "$out" | grep -Fq "Python $pin"; then
+  pass "python.sh fresh install exits 0 and reports install plus global"
+else
+  fail "python.sh fresh install failed"
+fi
+if [ "$(cat "$work/.pyenv/version")" = "$pin" ]; then
+  pass "python.sh fresh install writes the pinned global version"
+else
+  fail "python.sh fresh install did not set the pinned global version"
+fi
+if [ ! -e "$work/.bashrc" ] && [ ! -e "$work/.bash_profile" ]; then
+  pass "python.sh fresh install does not create .bashrc or .bash_profile"
+else
+  fail "python.sh created .bashrc or .bash_profile"
+fi
+
+sum1="$(tree_checksum "$work")"
+status=0
+out="$(run_python_sh "$work" 2>&1)" || status=$?
+sum2="$(tree_checksum "$work")"
+if [ "$status" -eq 0 ] &&
+  printf '%s\n' "$out" | grep -q 'already installed' &&
+  printf '%s\n' "$out" | grep -q 'already the global'; then
+  pass "python.sh rerun reports already installed and already the global"
+else
+  fail "python.sh rerun messages failed"
+fi
+if [ "$sum1" = "$sum2" ]; then
+  pass "python.sh rerun writes nothing"
+else
+  fail "python.sh rerun changed the temp HOME tree"
+fi
+
+work="$(mktemp -d "$TMP_HOME/python-switch-global.XXXXXX")"
+install_fake_pyenv "$work"
+install_fake_pipx "$work"
+mkdir -p "$work/.pyenv/versions/$pin/bin" "$work/.pyenv/versions/3.12.8"
+printf '%s\n' "#!/bin/sh" "echo Python $pin" > "$work/.pyenv/versions/$pin/bin/python"
+chmod +x "$work/.pyenv/versions/$pin/bin/python"
+printf '%s\n' '3.12.8' > "$work/.pyenv/version"
+status=0
+out="$(run_python_sh "$work" 2>&1)" || status=$?
+if [ "$status" -eq 0 ] &&
+  printf '%s\n' "$out" | grep -q 'already installed' &&
+  printf '%s\n' "$out" | grep -q 'Setting global'; then
+  pass "python.sh sets global when the pin is already installed"
+else
+  fail "python.sh did not set global for a preinstalled pin"
+fi
+if [ -d "$work/.pyenv/versions/3.12.8" ]; then
+  pass "python.sh leaves other installed versions in place"
+else
+  fail "python.sh removed another installed version"
+fi
+if [ "$(cat "$work/.pyenv/version")" = "$pin" ]; then
+  pass "python.sh switch-global writes the pinned version"
+else
+  fail "python.sh switch-global did not write the pinned version"
+fi
+if [ ! -e "$work/.bashrc" ] && [ ! -e "$work/.bash_profile" ]; then
+  pass "python.sh switch-global does not create .bashrc or .bash_profile"
+else
+  fail "python.sh switch-global created .bashrc or .bash_profile"
 fi
 
 if [ "$failures" -ne 0 ]; then

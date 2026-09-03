@@ -1,7 +1,7 @@
 .DEFAULT_GOAL := help
 SHELL := /bin/bash
 
-.PHONY: help lint test prerequisites brew git_pull shell git
+.PHONY: help lint test prerequisites brew git_pull shell python git
 
 help: ## Show available targets
 	@awk 'BEGIN {FS = ":.*## "}; /^[a-zA-Z0-9_-]+:.*## / {printf "  %-14s %s\n", $$1, $$2}' $(MAKEFILE_LIST)
@@ -26,3 +26,6 @@ shell: ## Print the Bash source line to add; never edits ~/.bashrc
 
 git: ## Add one idempotent include.path and link the global ignore file
 	./scripts/git.sh
+
+python: ## Install the pinned pyenv Python if missing and set pyenv global
+	./scripts/python.sh
