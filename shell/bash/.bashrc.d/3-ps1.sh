@@ -1,9 +1,20 @@
 # shell/bash/.bashrc.d/3-ps1.sh - PS1 prompt with Git branch and Python version
 
-if [ -f ~/.git-prompt.sh ]; then
-    # shellcheck source=/dev/null
-    source ~/.git-prompt.sh
+_git_prompt=""
+if command -v xcode-select >/dev/null 2>&1; then
+    _clt="$(xcode-select -p 2>/dev/null)" || _clt=""
+    if [ -n "$_clt" ] && [ -f "$_clt/usr/share/git-core/git-prompt.sh" ]; then
+        _git_prompt="$_clt/usr/share/git-core/git-prompt.sh"
+    fi
 fi
+if [ -z "$_git_prompt" ] && [ -f "$HOME/.git-prompt.sh" ]; then
+    _git_prompt="$HOME/.git-prompt.sh"
+fi
+if [ -n "$_git_prompt" ]; then
+    # shellcheck source=/dev/null
+    source "$_git_prompt"
+fi
+unset _git_prompt _clt
 
 set_prompt() {
     if command -v __git_ps1 >/dev/null 2>&1; then
@@ -27,13 +38,14 @@ set_prompt() {
 
 case "$PROMPT_COMMAND" in
     *set_prompt*) ;;
+    '')
+        PROMPT_COMMAND="set_prompt"
+        ;;
+    *';')
+        PROMPT_COMMAND="${PROMPT_COMMAND}set_prompt"
+        ;;
     *)
-        if [ -n "$PROMPT_COMMAND" ]; then
-            PROMPT_COMMAND=$(echo "$PROMPT_COMMAND" | sed 's/;;*$/;/')
-            PROMPT_COMMAND="${PROMPT_COMMAND}set_prompt"
-        else
-            PROMPT_COMMAND="set_prompt"
-        fi
+        PROMPT_COMMAND="${PROMPT_COMMAND};set_prompt"
         ;;
 esac
 

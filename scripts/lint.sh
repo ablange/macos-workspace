@@ -75,8 +75,7 @@ run_shellcheck_sourced() {
     return 0
   fi
 
-  # SC2001 is the preserved sed-based PROMPT_COMMAND normalize in 3-ps1.sh.
-  if ! shellcheck -s bash -e SC2001 "$file"; then
+  if ! shellcheck -s bash "$file"; then
     echo "lint: shellcheck failed: $file"
     failures=$((failures + 1))
   fi

@@ -74,7 +74,7 @@ Optional review (out of scope for `make brew`; do not automate):
 
 ## Bash
 
-M02 is implemented. `shell/bash/` is the existing mini-data-stack-hedge-fund shell setup moved into this repository with only ownership and idempotency edits: local overrides load from `~/.bashrc.local`, the hard-coded Homebrew prefix example is gone, and re-sourcing does not duplicate `$PYENV_ROOT/bin` on `PATH` or `set_prompt` in `PROMPT_COMMAND`.
+M02 is implemented. `shell/bash/` is the existing mini-data-stack-hedge-fund shell setup moved into this repository with ownership, idempotency, and fresh-Mac helper-discovery edits: local overrides load from `~/.bashrc.local`, the hard-coded Homebrew prefix example is gone, re-sourcing does not duplicate `$PYENV_ROOT/bin` on `PATH` or `set_prompt` in `PROMPT_COMMAND`, and Git completion/prompt helpers come from Xcode Command Line Tools when available.
 
 Add one line to the existing `~/.bashrc`. `make shell` prints the line for this clone and never edits the file:
 
@@ -84,7 +84,7 @@ source "$HOME/<clone-location>/macos-workspace/shell/bash/.bashrc"
 
 The path depends on where the repository is cloned. `~/.bashrc` is not replaced. `~/.bash_profile` keeps `brew shellenv` and Homebrew bash-completion; macOS Terminal opens login shells, so `~/.bash_profile` should also `source ~/.bashrc`. Use `~/.bashrc.local` for machine-specific shell config (see `shell/bash/.bashrc.local.example`).
 
-`~/.git-completion.bash` and `~/.git-prompt.sh` remain user-provided. The fragments source them when present (Git ships both under `contrib/completion`). A fresh Mac without those files still gets aliases and the Python prompt segment, but not branch display or Git completion.
+Git completion and the branch prompt load from the helper files that ship with Xcode Command Line Tools (`usr/share/git-core/git-completion.bash` and `git-prompt.sh`), discovered with `xcode-select -p`. If those files are missing, the fragments fall back to `~/.git-completion.bash` and `~/.git-prompt.sh` when present. A Mac without CLT helpers and without those home files still gets aliases and the Python prompt segment, but not branch display or Git completion.
 
 Verify after a new login shell:
 
@@ -149,7 +149,7 @@ These steps **change the Mac**. They are **not** automated and **must not** be r
 
 1. In `~/.bashrc`, replace a `mini-data-stack-hedge-fund/shell/bash/.bashrc` source line with the macos-workspace line printed by `make shell`. Keep `export PATH="$HOME/.local/bin:$PATH"` in `~/.bashrc` if it is already there; no fragment provides it.
 2. In `~/.bash_profile`, keep `brew shellenv`, the Homebrew bash-completion line, and `source ~/.bashrc`. The `pyenv init` and `pyenv virtualenv-init` lines duplicate `2-pyenv.sh`; removing them is optional and eliminates duplicate shim paths on `PATH`.
-3. Keep `~/.git-completion.bash` and `~/.git-prompt.sh`. They are still sourced by the fragments.
+3. `~/.git-completion.bash` and `~/.git-prompt.sh` are optional. After Command Line Tools are installed, the fragments load the CLT copies. Keep the home files only as a fallback, or remove them once a new login shell defines `__git_ps1`.
 4. If an in-repo `mini-data-stack-hedge-fund/shell/bash/.bashrc.local` exists, copy its contents to `~/.bashrc.local` by hand.
 5. After `make git`, the repository supplies `alias.*` and `core.editor`. You may delete the accumulated `[alias]` block and a stray `[core] editor` from `~/.gitconfig` (for example `git config --global --unset-all alias.bs`), then verify with `git config --get-all alias.bs` (expect one value). Optionally move `[user]` into `~/.gitconfig.local`. Leave credential sections where they are.
 6. If this clone is ever moved, `make git` reports the stale include and a dangling `~/.config/git/ignore`. Remove them by hand (`git config --global --unset include.path '<old path>'`, then `rm ~/.config/git/ignore` after `readlink` confirms it is the dangling link), update the `~/.bashrc` source line, and rerun `make shell` and `make git`. This is never automated.

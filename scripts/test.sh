@@ -303,6 +303,12 @@ else
   pass "no /Users/ path in shell/, git/, scripts/shell.sh, or scripts/git.sh"
 fi
 
+if grep -RE '/Library/Developer/CommandLineTools|/Applications/Xcode\.app' shell scripts/shell.sh scripts/git.sh >/dev/null; then
+  fail "hard-coded Xcode or CLT path in shell/ or integration scripts"
+else
+  pass "no hard-coded Xcode or CLT path in shell/ or integration scripts"
+fi
+
 # Literal include path as written in git/.gitconfig, not an expansion.
 # shellcheck disable=SC2088
 local_include='~/.gitconfig.local'
@@ -357,7 +363,8 @@ fi
 run_sandbox_shell() {
   local work="$1"
   local script="$2"
-  env -i HOME="$work" PATH=/usr/bin:/bin:/usr/sbin:/sbin TERM=dumb /bin/bash --noprofile --norc -c "$script"
+  local path="${3:-/usr/bin:/bin:/usr/sbin:/sbin}"
+  env -i HOME="$work" PATH="$path" TERM=dumb /bin/bash --noprofile --norc -c "$script"
 }
 
 work="$(mktemp -d "$TMP_HOME/load-basic.XXXXXX")"
@@ -407,6 +414,54 @@ if run_sandbox_shell "$work" "source \"$REPO_ROOT/shell/bash/.bashrc\" && set_pr
   pass "set_prompt is silent without pyenv or git-prompt"
 else
   fail "set_prompt wrote stderr or failed without pyenv or git-prompt"
+fi
+
+work="$(mktemp -d "$TMP_HOME/load-prompt-command.XXXXXX")"
+if run_sandbox_shell "$work" "
+  PROMPT_COMMAND='history -a'
+  source \"$REPO_ROOT/shell/bash/.bashrc\"
+  source \"$REPO_ROOT/shell/bash/.bashrc\"
+  n=\$(printf '%s' \"\$PROMPT_COMMAND\" | grep -o set_prompt | wc -l | tr -d ' ')
+  [ \"\$n\" = 1 ] || exit 1
+  [ \"\$PROMPT_COMMAND\" = 'history -a;set_prompt' ] || exit 1
+"; then
+  pass "PROMPT_COMMAND history -a stays valid and registers set_prompt once"
+else
+  fail "PROMPT_COMMAND history -a registration failed"
+fi
+
+work="$(mktemp -d "$TMP_HOME/load-clt-helpers.XXXXXX")"
+clt_root="$(xcode-select -p 2>/dev/null || true)"
+if [ -n "$clt_root" ] && [ -f "$clt_root/usr/share/git-core/git-prompt.sh" ]; then
+  if run_sandbox_shell "$work" "source \"$REPO_ROOT/shell/bash/.bashrc\" && type __git_ps1 >/dev/null && alias gs >/dev/null"; then
+    pass "CLT git helpers load without ~/.git-prompt.sh"
+  else
+    fail "CLT git helpers did not load __git_ps1"
+  fi
+else
+  pass "CLT git helpers unavailable; skipped load check"
+fi
+
+work="$(mktemp -d "$TMP_HOME/load-helper-fallback.XXXXXX")"
+mkdir -p "$work/bin"
+printf '%s\n' '#!/bin/sh' 'exit 1' > "$work/bin/xcode-select"
+chmod +x "$work/bin/xcode-select"
+printf '%s\n' '__git_ps1() { printf %s "(home)"; }' > "$work/.git-prompt.sh"
+if run_sandbox_shell "$work" "source \"$REPO_ROOT/shell/bash/.bashrc\" && type __git_ps1 >/dev/null" "$work/bin:/usr/bin:/bin:/usr/sbin:/sbin"; then
+  pass "home git-prompt.sh is used when CLT helpers are unavailable"
+else
+  fail "home git-prompt.sh fallback failed"
+fi
+
+work="$(mktemp -d "$TMP_HOME/load-helper-absent.XXXXXX")"
+err="$work/helpers.err"
+mkdir -p "$work/bin"
+printf '%s\n' '#!/bin/sh' 'exit 1' > "$work/bin/xcode-select"
+chmod +x "$work/bin/xcode-select"
+if run_sandbox_shell "$work" "source \"$REPO_ROOT/shell/bash/.bashrc\" && alias ll gs >/dev/null && set_prompt && ! type __git_ps1 >/dev/null 2>&1" "$work/bin:/usr/bin:/bin:/usr/sbin:/sbin" 2>"$err" && [ ! -s "$err" ]; then
+  pass "missing CLT and home git helpers degrade silently"
+else
+  fail "missing git helpers were not silent or broke aliases"
 fi
 
 work="$(mktemp -d "$TMP_HOME/git-fresh.XXXXXX")"
@@ -579,6 +634,47 @@ else
   fail "git.sh stale-include changed include.path count to $include_count"
 fi
 
+work="$(mktemp -d "$TMP_HOME/git-stale-and-current.XXXXXX")"
+printf '%s\n' '[user]' '	name = Example' '[include]' \
+  "	path = $REPO_ROOT/git/.gitconfig" \
+  '	path = /old/path/macos-workspace/git/.gitconfig' > "$work/.gitconfig"
+before="$(tree_checksum "$work")"
+status=0
+out="$(with_git_env "$work" ./scripts/git.sh 2>&1)" || status=$?
+after="$(tree_checksum "$work")"
+if [ "$status" -ne 0 ]; then
+  pass "git.sh current-plus-stale exits non-zero"
+else
+  fail "git.sh current-plus-stale exited 0"
+fi
+if printf '%s\n' "$out" | grep -Fq '/old/path/macos-workspace/git/.gitconfig' &&
+  printf '%s\n' "$out" | grep -Fq "$REPO_ROOT/git/.gitconfig"; then
+  pass "git.sh current-plus-stale reports both include paths"
+else
+  fail "git.sh current-plus-stale did not report both include paths"
+fi
+if [ "$before" = "$after" ]; then
+  pass "git.sh current-plus-stale writes nothing"
+else
+  fail "git.sh current-plus-stale changed the temp HOME tree"
+fi
+include_count="$(with_git_env "$work" git config --global --get-all include.path 2>/dev/null | wc -l | tr -d ' ')"
+if [ "$include_count" = 2 ]; then
+  pass "git.sh current-plus-stale leaves both include.path values"
+else
+  fail "git.sh current-plus-stale changed include.path count to $include_count"
+fi
+if [ "$(with_git_env "$work" git config --global --get user.name)" = "Example" ]; then
+  pass "git.sh current-plus-stale preserves existing user.name"
+else
+  fail "git.sh current-plus-stale changed existing user.name"
+fi
+if [ ! -e "$work/.config/git/ignore" ] && [ ! -L "$work/.config/git/ignore" ]; then
+  pass "git.sh current-plus-stale does not create an ignore symlink"
+else
+  fail "git.sh current-plus-stale created an ignore path"
+fi
+
 work="$(mktemp -d "$TMP_HOME/shell-missing.XXXXXX")"
 before="$(tree_checksum "$work")"
 status=0
@@ -629,6 +725,79 @@ if [ "$before" = "$after" ]; then
   pass "shell.sh warning run does not write under HOME"
 else
   fail "shell.sh warning run changed the temp HOME tree"
+fi
+
+work="$(mktemp -d "$TMP_HOME/shell-commented-bashrc.XXXXXX")"
+printf '%s\n' "# source \"$REPO_ROOT/shell/bash/.bashrc\"" > "$work/.bashrc"
+printf '%s\n' 'source ~/.bashrc' > "$work/.bash_profile"
+before="$(tree_checksum "$work")"
+status=0
+out="$(HOME="$work" ./scripts/shell.sh 2>&1)" || status=$?
+after="$(tree_checksum "$work")"
+if [ "$status" -eq 0 ] && printf '%s\n' "$out" | grep -q 'add this line' &&
+  ! printf '%s\n' "$out" | grep -q "sources $REPO_ROOT/shell/bash/.bashrc"; then
+  pass "shell.sh treats a commented ~/.bashrc source line as inactive"
+else
+  fail "shell.sh treated a commented ~/.bashrc source line as active"
+fi
+if [ "$before" = "$after" ]; then
+  pass "shell.sh commented-bashrc run does not write under HOME"
+else
+  fail "shell.sh commented-bashrc run changed the temp HOME tree"
+fi
+
+work="$(mktemp -d "$TMP_HOME/shell-commented-profile.XXXXXX")"
+printf '%s\n' "source \"$REPO_ROOT/shell/bash/.bashrc\"" > "$work/.bashrc"
+printf '%s\n' '# source ~/.bashrc' > "$work/.bash_profile"
+before="$(tree_checksum "$work")"
+status=0
+out="$(HOME="$work" ./scripts/shell.sh 2>&1)" || status=$?
+after="$(tree_checksum "$work")"
+if [ "$status" -eq 0 ] && printf '%s\n' "$out" | grep -q 'warning'; then
+  pass "shell.sh treats a commented ~/.bash_profile source line as inactive"
+else
+  fail "shell.sh treated a commented ~/.bash_profile source line as active"
+fi
+if [ "$before" = "$after" ]; then
+  pass "shell.sh commented-profile run does not write under HOME"
+else
+  fail "shell.sh commented-profile run changed the temp HOME tree"
+fi
+
+work="$(mktemp -d "$TMP_HOME/shell-profile-local-only.XXXXXX")"
+printf '%s\n' "source \"$REPO_ROOT/shell/bash/.bashrc\"" > "$work/.bashrc"
+printf '%s\n' 'source ~/.bashrc.local' > "$work/.bash_profile"
+before="$(tree_checksum "$work")"
+status=0
+out="$(HOME="$work" ./scripts/shell.sh 2>&1)" || status=$?
+after="$(tree_checksum "$work")"
+if [ "$status" -eq 0 ] && printf '%s\n' "$out" | grep -q 'warning'; then
+  pass "shell.sh does not treat source ~/.bashrc.local as sourcing ~/.bashrc"
+else
+  fail "shell.sh treated source ~/.bashrc.local as sourcing ~/.bashrc"
+fi
+if [ "$before" = "$after" ]; then
+  pass "shell.sh bashrc.local-only profile run does not write under HOME"
+else
+  fail "shell.sh bashrc.local-only profile run changed the temp HOME tree"
+fi
+
+work="$(mktemp -d "$TMP_HOME/shell-dot-profile.XXXXXX")"
+printf '%s\n' "source \"$REPO_ROOT/shell/bash/.bashrc\"" > "$work/.bashrc"
+printf '%s\n' '. ~/.bashrc' > "$work/.bash_profile"
+before="$(tree_checksum "$work")"
+status=0
+out="$(HOME="$work" ./scripts/shell.sh 2>&1)" || status=$?
+after="$(tree_checksum "$work")"
+if [ "$status" -eq 0 ] && ! printf '%s\n' "$out" | grep -q 'warning'; then
+  pass "shell.sh accepts . ~/.bashrc in ~/.bash_profile"
+else
+  fail "shell.sh did not accept . ~/.bashrc"
+fi
+if [ "$before" = "$after" ]; then
+  pass "shell.sh dot-profile run does not write under HOME"
+else
+  fail "shell.sh dot-profile run changed the temp HOME tree"
 fi
 
 if [ "$failures" -ne 0 ]; then

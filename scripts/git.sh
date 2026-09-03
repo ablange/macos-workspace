@@ -48,9 +48,7 @@ done <<EOF
 $includes
 EOF
 
-if [ "$have_current" -eq 1 ]; then
-  echo "git: include.path already $WANTED_INCLUDE"
-elif [ -n "$stale" ]; then
+if [ -n "$stale" ]; then
   echo "git: existing macos-workspace include points elsewhere:"
   while IFS= read -r path; do
     [ -n "$path" ] || continue
@@ -63,6 +61,10 @@ EOF
   echo "  $WANTED_INCLUDE"
   echo "Then rerun: make git" >&2
   exit 1
+fi
+
+if [ "$have_current" -eq 1 ]; then
+  echo "git: include.path already $WANTED_INCLUDE"
 else
   git config --global --add include.path "$WANTED_INCLUDE"
   echo "git: added include.path $WANTED_INCLUDE"
