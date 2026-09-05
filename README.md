@@ -59,26 +59,26 @@ make bootstrap
 
 ### 3. Load the Bash configuration
 
-Append this to your `~/.bashrc`:
+Append the `source` line to `~/.bashrc`:
 
-```text
+```bash
 cat <<'EOF' >> ~/.bashrc
 
-# Shell configuration for macos-workspace
+# macos-workspace
 source "$HOME/repos/macos-workspace/shell/bash/.bashrc"
-
 EOF
 ```
 
-Then run:
+Terminal opens login shells, which read `~/.bash_profile` rather than `~/.bashrc`. If `~/.bash_profile` does not already source `~/.bashrc`, add that too:
 
 ```bash
-source ~/.bashrc
+grep -qxF 'source ~/.bashrc' ~/.bash_profile 2>/dev/null || printf '%s\n' 'source ~/.bashrc' >> ~/.bash_profile
 ```
 
-> [!NOTE]
-> Each terminal opens with a ready prompt, aliases, completions, and the right `PATH`—no manual setup needed.
+Then open a new terminal window. `make shell` is read-only and reports whether both files are wired correctly.
 
+> [!NOTE]
+> From here on, every new terminal starts with the repository's prompt, aliases, Git completion, and `PATH`.
 
 ### 4. Finish the manual steps
 
@@ -118,7 +118,7 @@ Neither target changes your machine. They prove the repository is internally con
 ## Maintaining the repository
 
 - Edit the `Brewfile` by hand; never generate it with `brew bundle dump`. Keep every cask gated on its `/Applications` bundle. Do not declare Homebrew Python interpreters or the standalone `docker`, `docker-compose`, or `podman` formulae; pyenv and Docker Desktop own those.
-- Add a macOS preference as one `ensure_default` call in `scripts/macos/defaults.sh` plus a row in the table above with its inverse. Restart only Finder or Dock.
+- Add a macOS preference as one `ensure_default` call in `scripts/macos/defaults.sh` plus a row, with its inverse, in the macOS table under *What the bootstrap changes*. Restart only Finder or Dock.
 - Scripts under `scripts/` use `#!/usr/bin/env bash` and `set -euo pipefail` and must be idempotent. Sourced files under `shell/` never set strict-mode flags.
 - Everything must run on system Bash 3.2 and GNU Make 3.81, so avoid newer features such as `mapfile`, associative arrays, `.ONESHELL`, and `$(file ...)`. Never hard-code a Homebrew prefix; use `brew --prefix` or `brew shellenv`.
 - Never replace or append to `~/.bashrc` or `~/.gitconfig` from code. No `rm -rf` on user paths, `defaults delete`, `sudo`, or `killall` beyond Finder and Dock. Tests must never mutate the machine.
