@@ -53,6 +53,7 @@ required_files=(
   scripts/macos/defaults.sh
   knowledge/decisions/0004-macos-defaults-policy.md
   docs/manual-setup.md
+  knowledge/decisions/0005-bootstrap-composition.md
 )
 for file in "${required_files[@]}"; do
   if [ -e "$file" ]; then
@@ -378,6 +379,46 @@ if make -n macos | grep -Eq '^[[:space:]]*\./scripts/macos/defaults\.sh$'; then
   pass "Makefile macos recipe is ./scripts/macos/defaults.sh"
 else
   fail "Makefile macos recipe must be a single ./scripts/macos/defaults.sh line"
+fi
+
+if grep -E '^\.PHONY:' Makefile | grep -qw bootstrap; then
+  pass "Makefile .PHONY includes bootstrap"
+else
+  fail "Makefile .PHONY must include bootstrap"
+fi
+
+if grep -q '\.NOTPARALLEL' Makefile; then
+  fail "Makefile must not declare .NOTPARALLEL"
+else
+  pass "Makefile has no .NOTPARALLEL"
+fi
+
+if grep -q 'make bootstrap' README.md; then
+  pass "README.md mentions make bootstrap"
+else
+  fail "README.md must mention make bootstrap"
+fi
+
+status=0
+bootstrap_n_out="$(make -n bootstrap 2>&1)" || status=$?
+if [ "$status" -eq 0 ]; then
+  pass "make -n bootstrap exits 0"
+else
+  fail "make -n bootstrap exited $status"
+fi
+
+bootstrap_scripts="$(printf '%s\n' "$bootstrap_n_out" | grep '^[[:space:]]*\./scripts/' | sed 's/^[[:space:]]*//')"
+expected_bootstrap_scripts="$(printf '%s\n' \
+  './scripts/prerequisites.sh' \
+  './scripts/brew.sh' \
+  './scripts/shell.sh' \
+  './scripts/git.sh' \
+  './scripts/python.sh' \
+  './scripts/macos/defaults.sh')"
+if [ "$bootstrap_scripts" = "$expected_bootstrap_scripts" ]; then
+  pass "make -n bootstrap composes the six setup scripts once, in order"
+else
+  fail "make -n bootstrap script sequence mismatch"
 fi
 
 macos_script="scripts/macos/defaults.sh"

@@ -1,7 +1,7 @@
 .DEFAULT_GOAL := help
 SHELL := /bin/bash
 
-.PHONY: help lint test prerequisites brew git_pull shell python macos git
+.PHONY: help lint test prerequisites brew git_pull shell python macos bootstrap git
 
 help: ## Show available targets
 	@awk 'BEGIN {FS = ":.*## "}; /^[a-zA-Z0-9_-]+:.*## / {printf "  %-14s %s\n", $$1, $$2}' $(MAKEFILE_LIST)
@@ -32,3 +32,11 @@ python: ## Install the pinned pyenv Python if missing and set pyenv global
 
 macos: ## Apply curated, reversible Finder/Dock defaults; restarts only on change
 	./scripts/macos/defaults.sh
+
+bootstrap: ## Run automated workstation setup in dependency order
+	$(MAKE) prerequisites
+	$(MAKE) brew
+	$(MAKE) shell
+	$(MAKE) git
+	$(MAKE) python
+	$(MAKE) macos
