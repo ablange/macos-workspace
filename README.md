@@ -158,6 +158,10 @@ Input settings, appearance, and security/privacy settings are intentionally not 
 
 Brittle, proprietary, or security-sensitive setup is documented, not automated: app sign-ins, cloud auth, and tools with no Homebrew cask. See [docs/manual-setup.md](docs/manual-setup.md).
 
+## Bootstrap
+
+M06 is implemented. `make bootstrap` is a thin Makefile composition: it runs `prerequisites`, `brew`, `shell`, `git`, `python`, and `macos` in that order as sequential `$(MAKE)` calls, and it stops at the first failure. On a Mac where `prerequisites` just installed Homebrew, follow the installer's Next steps, open a new shell, and rerun `make bootstrap`. It does not edit `~/.bashrc`; Git integration is limited to the existing idempotent `make git` behavior (one `include.path` plus the global-ignore symlink). It does not run the remaining manual setup steps in [docs/manual-setup.md](docs/manual-setup.md) and does not add `doctor` or `status`.
+
 ## Make targets
 
 Implemented:
@@ -172,21 +176,15 @@ Implemented:
 - `git` — one idempotent `include.path` plus the global-ignore symlink
 - `python` — install the pinned pyenv Python if missing and set `pyenv global`
 - `macos` — curated, reversible Finder/Dock defaults; restarts only on change
-
-Planned:
-
-- `bootstrap` — run the above in order, then `doctor`
-- `doctor` — report-only drift checks
-- `status` — terse summary
+- `bootstrap` — run `prerequisites` → `brew` → `shell` → `git` → `python` → `macos` in order; stops at the first failure; safe to rerun; automated workstation setup only
 
 ## Fresh-Mac workflow
 
 1. Clone this repository.
-2. Confirm `make help`, `make lint`, and `make test` succeed.
-3. Run `make prerequisites`, then `make brew`.
-4. Run `make shell`, add the printed line to `~/.bashrc`, then run `make git`.
-5. Open a new shell, then run `make python`.
-6. Complete the remaining steps in [docs/manual-setup.md](docs/manual-setup.md).
+2. Run `make bootstrap`.
+3. If `prerequisites` installed Homebrew, follow the Homebrew installer's Next steps, open a new shell, and rerun `make bootstrap`.
+4. Add the line printed by `make shell` to `~/.bashrc`, then open a new shell.
+5. Complete the remaining steps in [docs/manual-setup.md](docs/manual-setup.md).
 
 ## One-time migration — shell and Git
 
@@ -203,4 +201,4 @@ Pre-existing and out of scope: Nix profile `PATH` entries. `~/.pyenv/version` an
 
 ## Roadmap
 
-M00 (Repository Foundation), M01 (Homebrew Workstation Baseline), M02 (Shell and Git Environment), M03 (Python Workstation Standard), M04 (Safe macOS Preferences), and M05 (Tiny Manual Checklist) are what this tree implements. Later milestones remain. The authoritative roadmap lives outside this repository; knowledge files record durable architecture and decisions only.
+M00 (Repository Foundation), M01 (Homebrew Workstation Baseline), M02 (Shell and Git Environment), M03 (Python Workstation Standard), M04 (Safe macOS Preferences), M05 (Tiny Manual Checklist), and M06 (Make Bootstrap) are what this tree implements. Later milestones remain. The authoritative roadmap lives outside this repository; knowledge files record durable architecture and decisions only.
