@@ -1,7 +1,7 @@
 .DEFAULT_GOAL := help
 SHELL := /bin/bash
 
-.PHONY: help lint test prerequisites brew git_pull shell python git
+.PHONY: help lint test prerequisites brew git_pull shell python macos git
 
 help: ## Show available targets
 	@awk 'BEGIN {FS = ":.*## "}; /^[a-zA-Z0-9_-]+:.*## / {printf "  %-14s %s\n", $$1, $$2}' $(MAKEFILE_LIST)
@@ -29,3 +29,6 @@ git: ## Add one idempotent include.path and link the global ignore file
 
 python: ## Install the pinned pyenv Python if missing and set pyenv global
 	./scripts/python.sh
+
+macos: ## Apply curated, reversible Finder/Dock defaults; restarts only on change
+	./scripts/macos/defaults.sh

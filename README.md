@@ -120,7 +120,39 @@ command -v pipx
 
 ## macOS defaults
 
-Later automation will change only defaults that are reversible and understood. No Gatekeeper changes. Finder is restarted only when a Finder key actually changed.
+M04 is implemented. `make macos` applies a small, curated set of reversible Finder and Dock preferences. It reads each key first and writes only when the current value differs, so it is safe to rerun. Finder or Dock is restarted only when a key in that group actually changed. Visible effects (Desktop volume icons, Dock autohide) appear after that restart. No Gatekeeper changes. `make macos` can be run independently at any time.
+
+Failure handling:
+
+- A key that `defaults read` reports as absent is written. If a read fails for any other reason, that key is left unchanged, the `defaults` error is printed, the remaining keys are still processed, and the run exits 1.
+- If a write fails, the `defaults` error is printed with the domain and key, successful writes are left intact, remaining keys are still processed, and only groups with a successful write are restarted. The run exits 1.
+- Finder and Dock restarts are attempted independently; a Finder failure never skips the Dock attempt. If a restart fails, the preferences are already written but not yet visible, and the run exits 1 with the exact retry command.
+- Because a later run sees converged values and restarts nothing, retry a failed restart explicitly: `MACOS_RESTART=finder make macos`, `MACOS_RESTART=dock make macos`, or `MACOS_RESTART=finder,dock make macos`. The variable only adds a restart; it never writes anything, and any other value is rejected before the run starts.
+
+### Finder
+
+Restarted only if one of these keys changed.
+
+- `NSGlobalDomain AppleShowAllExtensions` (`-bool true`) — always see real file types.
+- `com.apple.finder FXPreferredViewStyle` (`-string Nlsv`) — list view for new Finder windows.
+- `com.apple.finder ShowHardDrivesOnDesktop` (`-bool true`) — internal volumes on the Desktop.
+- `com.apple.finder ShowExternalHardDrivesOnDesktop` (`-bool true`) — external volumes on the Desktop.
+- `com.apple.finder ShowRemovableMediaOnDesktop` (`-bool true`) — removable media on the Desktop.
+- `com.apple.finder ShowMountedServersOnDesktop` (`-bool true`) — mounted servers on the Desktop.
+
+Inspect with `defaults read NSGlobalDomain AppleShowAllExtensions` and the same for each `com.apple.finder` key. Reverse with the inverse `defaults write` (`-bool false`, or another view style such as `icnv`) and restart Finder, or use Finder settings / System Settings.
+
+### Dock
+
+Restarted only if this key changed.
+
+- `com.apple.dock autohide` (`-bool true`) — keep editor and terminal screen space.
+
+Inspect with `defaults read com.apple.dock autohide`. Reverse with `defaults write com.apple.dock autohide -bool false` and restart Dock, or System Settings → Desktop & Dock → Automatically hide and show the Dock.
+
+### Intentionally not automated
+
+Input settings, appearance, and security/privacy settings are intentionally not automated.
 
 ## Manual configuration
 
@@ -139,10 +171,10 @@ Implemented:
 - `shell` — print the Bash `source` line; exit 0 when it is merely missing; never edit `~/.bashrc`
 - `git` — one idempotent `include.path` plus the global-ignore symlink
 - `python` — install the pinned pyenv Python if missing and set `pyenv global`
+- `macos` — curated, reversible Finder/Dock defaults; restarts only on change
 
 Planned:
 
-- `macos` — curated, reversible defaults
 - `bootstrap` — run the above in order, then `doctor`
 - `doctor` — report-only drift checks
 - `status` — terse summary
@@ -171,4 +203,4 @@ Pre-existing and out of scope: Nix profile `PATH` entries. `~/.pyenv/version` an
 
 ## Roadmap
 
-M00 (Repository Foundation), M01 (Homebrew Workstation Baseline), M02 (Shell and Git Environment), and M03 (Python Workstation Standard) are what this tree implements. Later milestones remain. The authoritative roadmap lives outside this repository; knowledge files record durable architecture and decisions only.
+M00 (Repository Foundation), M01 (Homebrew Workstation Baseline), M02 (Shell and Git Environment), M03 (Python Workstation Standard), and M04 (Safe macOS Preferences) are what this tree implements. Later milestones remain. The authoritative roadmap lives outside this repository; knowledge files record durable architecture and decisions only.
