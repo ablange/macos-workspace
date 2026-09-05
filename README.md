@@ -160,7 +160,7 @@ Brittle, proprietary, or security-sensitive setup is documented, not automated: 
 
 ## Bootstrap
 
-M06 is implemented. `make bootstrap` is a thin Makefile composition: it runs `prerequisites`, `brew`, `shell`, `git`, `python`, and `macos` in that order as sequential `$(MAKE)` calls, and it stops at the first failure. On a Mac where `prerequisites` just installed Homebrew, follow the installer's Next steps, open a new shell, and rerun `make bootstrap`. It does not edit `~/.bashrc` or `~/.gitconfig`, does not run the remaining manual steps in [docs/manual-setup.md](docs/manual-setup.md), and does not add `doctor` or `status`.
+M06 is implemented. `make bootstrap` is a thin Makefile composition: it runs `prerequisites`, `brew`, `shell`, `git`, `python`, and `macos` in that order as sequential `$(MAKE)` calls, and it stops at the first failure. On a Mac where `prerequisites` just installed Homebrew, follow the installer's Next steps, open a new shell, and rerun `make bootstrap`. It does not edit `~/.bashrc`; Git integration is limited to the existing idempotent `make git` behavior (one `include.path` plus the global-ignore symlink). It does not run the remaining manual setup steps in [docs/manual-setup.md](docs/manual-setup.md) and does not add `doctor` or `status`.
 
 ## Make targets
 

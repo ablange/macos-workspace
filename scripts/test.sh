@@ -407,7 +407,7 @@ else
   fail "make -n bootstrap exited $status"
 fi
 
-bootstrap_scripts="$(printf '%s\n' "$bootstrap_n_out" | grep '^[[:space:]]*\./scripts/' | sed 's/^[[:space:]]*//')"
+bootstrap_scripts="$(printf '%s\n' "$bootstrap_n_out" | grep '^[[:space:]]*\./scripts/' | sed 's/^[[:space:]]*//' || true)"
 expected_bootstrap_scripts="$(printf '%s\n' \
   './scripts/prerequisites.sh' \
   './scripts/brew.sh' \

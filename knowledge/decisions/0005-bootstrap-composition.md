@@ -8,7 +8,7 @@ updated: 2026-09-05
 
 ## Context
 
-M00–M05 shipped independent Make targets for automated workstation setup: `prerequisites`, `brew`, `shell`, `git`, `python`, and `macos`. Those targets have a required dependency order. A fresh Mac where `prerequisites` installs Homebrew leaves `brew` off `PATH` until the user follows the installer's Next steps. Earlier ADRs (0001, 0003) expected a later `doctor` target for drift reporting.
+By the end of M05, the repository had six independent automated setup targets: `prerequisites`, `brew`, `shell`, `git`, `python`, and `macos`. Those targets have a required dependency order. A fresh Mac where `prerequisites` installs Homebrew leaves `brew` off `PATH` until the user follows the installer's Next steps. Earlier ADRs (0001, 0003) expected a later `doctor` target for drift reporting.
 
 ## Decision
 
