@@ -156,7 +156,7 @@ Input settings, appearance, and security/privacy settings are intentionally not 
 
 ## Manual configuration
 
-Brittle, proprietary, or security-sensitive setup is documented, not automated: app sign-ins, cloud auth, and tools with no Homebrew cask.
+Brittle, proprietary, or security-sensitive setup is documented, not automated: app sign-ins, cloud auth, and tools with no Homebrew cask. See [docs/manual-setup.md](docs/manual-setup.md).
 
 ## Make targets
 
@@ -186,7 +186,7 @@ Planned:
 3. Run `make prerequisites`, then `make brew`.
 4. Run `make shell`, add the printed line to `~/.bashrc`, then run `make git`.
 5. Open a new shell, then run `make python`.
-6. Complete documented manual steps (auth, apps without a cask, GUI preferences).
+6. Complete the remaining steps in [docs/manual-setup.md](docs/manual-setup.md).
 
 ## One-time migration — shell and Git
 
@@ -203,4 +203,4 @@ Pre-existing and out of scope: Nix profile `PATH` entries. `~/.pyenv/version` an
 
 ## Roadmap
 
-M00 (Repository Foundation), M01 (Homebrew Workstation Baseline), M02 (Shell and Git Environment), M03 (Python Workstation Standard), and M04 (Safe macOS Preferences) are what this tree implements. Later milestones remain. The authoritative roadmap lives outside this repository; knowledge files record durable architecture and decisions only.
+M00 (Repository Foundation), M01 (Homebrew Workstation Baseline), M02 (Shell and Git Environment), M03 (Python Workstation Standard), M04 (Safe macOS Preferences), and M05 (Tiny Manual Checklist) are what this tree implements. Later milestones remain. The authoritative roadmap lives outside this repository; knowledge files record durable architecture and decisions only.

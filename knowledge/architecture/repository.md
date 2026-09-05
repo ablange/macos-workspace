@@ -16,7 +16,7 @@ updated: 2026-09-05
 | `python/` | Pinned workstation Python version (`python/version`). |
 | `shell/` | Sourced Bash configuration. `shell/bash/.bashrc` loads `shell/bash/.bashrc.d/{0-setup,1-git,2-pyenv,3-ps1}.sh` then `~/.bashrc.local`. `0-setup.sh` holds aliases and adds `$HOME/.local/bin` to `PATH`. Never sets strict-mode flags. |
 | `git/` | Portable Git configuration. `git/.gitconfig`, `git/.gitconfig.local.example`, and `git/ignore`. |
-| `docs/` | Manual setup that must not be automated (later milestone). |
+| `docs/` | Manual setup that must not be automated ([docs/manual-setup.md](../../docs/manual-setup.md)). |
 | `knowledge/` | Durable architecture and decisions. Does not copy the roadmap. |
 
 Directories are created only when they have content.

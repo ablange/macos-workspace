@@ -52,6 +52,7 @@ required_files=(
   knowledge/decisions/0003-shell-and-git-indirection.md
   scripts/macos/defaults.sh
   knowledge/decisions/0004-macos-defaults-policy.md
+  docs/manual-setup.md
 )
 for file in "${required_files[@]}"; do
   if [ -e "$file" ]; then
