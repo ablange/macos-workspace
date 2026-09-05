@@ -54,6 +54,7 @@ required_files=(
   knowledge/decisions/0004-macos-defaults-policy.md
   docs/manual-setup.md
   knowledge/decisions/0005-bootstrap-composition.md
+  .github/workflows/ci.yml
 )
 for file in "${required_files[@]}"; do
   if [ -e "$file" ]; then
