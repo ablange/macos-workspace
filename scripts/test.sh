@@ -1139,6 +1139,19 @@ case "$cmd" in
     typ="$3"
     val="$4"
     printf 'write %s %s %s %s\n' "$domain" "$key" "$typ" "$val" >> "$log"
+    # FAKE_DEFAULTS_WRITE_FAIL is a newline-separated list of
+    # "<domain> <key>" entries. A matching write is logged, then fails
+    # without mutating state.
+    case "
+${FAKE_DEFAULTS_WRITE_FAIL:-}
+" in
+      *"
+$domain $key
+"*)
+        printf '%s\n' "fake defaults: could not write preferences for $domain" >&2
+        exit 1
+        ;;
+    esac
     stored="$val"
     if [ "$typ" = "-bool" ]; then
       case "$val" in
@@ -1206,6 +1219,7 @@ run_macos_sh() {
     FAKE_DEFAULTS_LOG="$work/defaults.log" \
     FAKE_KILLALL_LOG="$work/killall.log" \
     FAKE_DEFAULTS_READ_FAIL="${FAKE_DEFAULTS_READ_FAIL:-}" \
+    FAKE_DEFAULTS_WRITE_FAIL="${FAKE_DEFAULTS_WRITE_FAIL:-}" \
     FAKE_KILLALL_FAIL="${FAKE_KILLALL_FAIL:-}" \
     MACOS_RESTART="${MACOS_RESTART:-}" \
     ./scripts/macos/defaults.sh
@@ -1402,6 +1416,153 @@ if [ "$status" -ne 0 ] && [ "$writes" = "0" ] && [ "$kills" = "0" ]; then
   pass "macos.sh read error on a converged HOME writes nothing and restarts nothing"
 else
   fail "macos.sh read error on converged HOME: expected non-zero, 0 writes, 0 restarts; status=$status writes=$writes kills=$kills"
+fi
+
+work="$(mktemp -d "$TMP_HOME/macos-dock-write-fails.XXXXXX")"
+install_fake_defaults "$work"
+install_fake_killall "$work"
+status=0
+out="$(FAKE_DEFAULTS_WRITE_FAIL='com.apple.dock autohide' run_macos_sh "$work" 2>&1)" || status=$?
+writes="$(count_log_lines "$work/defaults.log" '^write ')"
+finder_kills="$(count_log_lines "$work/killall.log" '^Finder$')"
+dock_kills="$(count_log_lines "$work/killall.log" '^Dock$')"
+if [ "$status" -ne 0 ] && [ "$writes" = "7" ] && [ "$finder_kills" = "1" ] && [ "$dock_kills" = "0" ]; then
+  pass "macos.sh Dock write failure still restarts Finder and skips the Dock restart"
+else
+  fail "macos.sh Dock write failure: expected non-zero, 7 writes, Finder only; status=$status writes=$writes finder=$finder_kills dock=$dock_kills"
+fi
+if printf '%s\n' "$out" | grep -q 'cannot write com.apple.dock autohide' &&
+  printf '%s\n' "$out" | grep -q 'could not write preferences for com.apple.dock' &&
+  printf '%s\n' "$out" | grep -q '1 preference(s) could not be written' &&
+  printf '%s\n' "$out" | grep -q 'restarting Finder' &&
+  printf '%s\n' "$out" | grep -q 'Dock unchanged; not restarted'; then
+  pass "macos.sh Dock write failure reports the write diagnostic and restarts only Finder"
+else
+  fail "macos.sh Dock write failure did not report the Dock write diagnostic with a Finder-only restart"
+fi
+if grep -q 'NSGlobalDomain AppleShowAllExtensions=1' "$work/defaults-state" &&
+  ! grep -q 'com.apple.dock autohide=' "$work/defaults-state"; then
+  pass "macos.sh Dock write failure leaves successful Finder writes intact"
+else
+  fail "macos.sh Dock write failure mutated successful writes or stored the failed Dock key"
+fi
+
+work="$(mktemp -d "$TMP_HOME/macos-later-finder-write-fails.XXXXXX")"
+install_fake_defaults "$work"
+install_fake_killall "$work"
+status=0
+out="$(FAKE_DEFAULTS_WRITE_FAIL='com.apple.finder FXPreferredViewStyle' run_macos_sh "$work" 2>&1)" || status=$?
+writes="$(count_log_lines "$work/defaults.log" '^write ')"
+later_finder_writes="$(count_log_lines "$work/defaults.log" '^write com.apple.finder Show')"
+dock_writes="$(count_log_lines "$work/defaults.log" '^write com.apple.dock ')"
+finder_kills="$(count_log_lines "$work/killall.log" '^Finder$')"
+dock_kills="$(count_log_lines "$work/killall.log" '^Dock$')"
+if [ "$status" -ne 0 ] && [ "$writes" = "7" ] && [ "$later_finder_writes" = "4" ] && [ "$dock_writes" = "1" ] &&
+  [ "$finder_kills" = "1" ] && [ "$dock_kills" = "1" ]; then
+  pass "macos.sh later Finder write failure still processes remaining keys and restarts both groups"
+else
+  fail "macos.sh later Finder write failure: expected non-zero, remaining keys processed, both restarts; status=$status writes=$writes later_finder=$later_finder_writes dock_writes=$dock_writes finder=$finder_kills dock=$dock_kills"
+fi
+if printf '%s\n' "$out" | grep -q 'cannot write com.apple.finder FXPreferredViewStyle' &&
+  printf '%s\n' "$out" | grep -q '1 preference(s) could not be written' &&
+  printf '%s\n' "$out" | grep -q 'restarting Finder' &&
+  printf '%s\n' "$out" | grep -q 'restarting Dock'; then
+  pass "macos.sh later Finder write failure reports the failed key and restarts Finder once"
+else
+  fail "macos.sh later Finder write failure did not report the failed key with both restarts"
+fi
+if grep -q 'NSGlobalDomain AppleShowAllExtensions=1' "$work/defaults-state" &&
+  grep -q 'com.apple.dock autohide=1' "$work/defaults-state" &&
+  ! grep -q 'com.apple.finder FXPreferredViewStyle=' "$work/defaults-state"; then
+  pass "macos.sh later Finder write failure leaves other successful writes intact"
+else
+  fail "macos.sh later Finder write failure did not preserve successful writes"
+fi
+
+work="$(mktemp -d "$TMP_HOME/macos-group-writes-fail.XXXXXX")"
+install_fake_defaults "$work"
+install_fake_killall "$work"
+seed_finder_defaults_state "$work"
+status=0
+out="$(FAKE_DEFAULTS_WRITE_FAIL='com.apple.dock autohide' run_macos_sh "$work" 2>&1)" || status=$?
+writes="$(count_log_lines "$work/defaults.log" '^write ')"
+finder_kills="$(count_log_lines "$work/killall.log" '^Finder$')"
+dock_kills="$(count_log_lines "$work/killall.log" '^Dock$')"
+if [ "$status" -ne 0 ] && [ "$writes" = "1" ] && [ "$finder_kills" = "0" ] && [ "$dock_kills" = "0" ] &&
+  printf '%s\n' "$out" | grep -q 'Finder unchanged; not restarted' &&
+  printf '%s\n' "$out" | grep -q 'Dock unchanged; not restarted'; then
+  pass "macos.sh all Dock writes failing does not restart Dock"
+else
+  fail "macos.sh all Dock writes failing: expected non-zero, 1 write attempt, no restarts; status=$status writes=$writes finder=$finder_kills dock=$dock_kills"
+fi
+: > "$work/defaults.log"
+: > "$work/killall.log"
+status=0
+out="$(FAKE_DEFAULTS_WRITE_FAIL='com.apple.dock autohide' MACOS_RESTART=dock run_macos_sh "$work" 2>&1)" || status=$?
+writes="$(count_log_lines "$work/defaults.log" '^write ')"
+finder_kills="$(count_log_lines "$work/killall.log" '^Finder$')"
+dock_kills="$(count_log_lines "$work/killall.log" '^Dock$')"
+if [ "$status" -ne 0 ] && [ "$writes" = "1" ] && [ "$finder_kills" = "0" ] && [ "$dock_kills" = "1" ] &&
+  printf '%s\n' "$out" | grep -q 'restarting Dock (requested by MACOS_RESTART)'; then
+  pass "macos.sh MACOS_RESTART=dock still restarts Dock when its write fails"
+else
+  fail "macos.sh MACOS_RESTART after Dock write failure: expected Dock-only explicit restart; status=$status writes=$writes finder=$finder_kills dock=$dock_kills"
+fi
+
+work="$(mktemp -d "$TMP_HOME/macos-finder-writes-fail-dock-ok.XXXXXX")"
+install_fake_defaults "$work"
+install_fake_killall "$work"
+finder_write_fails="$(printf '%s\n' \
+  'NSGlobalDomain AppleShowAllExtensions' \
+  'com.apple.finder FXPreferredViewStyle' \
+  'com.apple.finder ShowHardDrivesOnDesktop' \
+  'com.apple.finder ShowExternalHardDrivesOnDesktop' \
+  'com.apple.finder ShowRemovableMediaOnDesktop' \
+  'com.apple.finder ShowMountedServersOnDesktop')"
+status=0
+out="$(FAKE_DEFAULTS_WRITE_FAIL="$finder_write_fails" run_macos_sh "$work" 2>&1)" || status=$?
+writes="$(count_log_lines "$work/defaults.log" '^write ')"
+finder_kills="$(count_log_lines "$work/killall.log" '^Finder$')"
+dock_kills="$(count_log_lines "$work/killall.log" '^Dock$')"
+if [ "$status" -ne 0 ] && [ "$writes" = "7" ] && [ "$finder_kills" = "0" ] && [ "$dock_kills" = "1" ] &&
+  printf '%s\n' "$out" | grep -q 'Finder unchanged; not restarted' &&
+  printf '%s\n' "$out" | grep -q 'restarting Dock' &&
+  printf '%s\n' "$out" | grep -q '6 preference(s) could not be written'; then
+  pass "macos.sh all Finder writes failing still restarts Dock after its successful write"
+else
+  fail "macos.sh all Finder writes failing: expected Dock-only restart and 6 write failures; status=$status writes=$writes finder=$finder_kills dock=$dock_kills"
+fi
+if grep -q 'com.apple.dock autohide=1' "$work/defaults-state" &&
+  ! grep -q 'AppleShowAllExtensions=' "$work/defaults-state"; then
+  pass "macos.sh all Finder writes failing leave the successful Dock write intact"
+else
+  fail "macos.sh all Finder writes failing did not preserve the successful Dock write"
+fi
+
+work="$(mktemp -d "$TMP_HOME/macos-multiple-write-fails.XXXXXX")"
+install_fake_defaults "$work"
+install_fake_killall "$work"
+multi_write_fails="$(printf '%s\n' \
+  'com.apple.finder FXPreferredViewStyle' \
+  'com.apple.dock autohide')"
+status=0
+out="$(FAKE_DEFAULTS_WRITE_FAIL="$multi_write_fails" run_macos_sh "$work" 2>&1)" || status=$?
+writes="$(count_log_lines "$work/defaults.log" '^write ')"
+finder_kills="$(count_log_lines "$work/killall.log" '^Finder$')"
+dock_kills="$(count_log_lines "$work/killall.log" '^Dock$')"
+if [ "$status" -ne 0 ] && [ "$writes" = "7" ] && [ "$finder_kills" = "1" ] && [ "$dock_kills" = "0" ]; then
+  pass "macos.sh multiple write failures restart only groups with a successful write"
+else
+  fail "macos.sh multiple write failures: expected non-zero, Finder-only restart; status=$status writes=$writes finder=$finder_kills dock=$dock_kills"
+fi
+if printf '%s\n' "$out" | grep -q 'cannot write com.apple.finder FXPreferredViewStyle' &&
+  printf '%s\n' "$out" | grep -q 'cannot write com.apple.dock autohide' &&
+  printf '%s\n' "$out" | grep -q 'could not write preferences for com.apple.finder' &&
+  printf '%s\n' "$out" | grep -q 'could not write preferences for com.apple.dock' &&
+  printf '%s\n' "$out" | grep -q '2 preference(s) could not be written'; then
+  pass "macos.sh multiple write failures report each key and the correct count"
+else
+  fail "macos.sh multiple write failures did not report both keys and a count of 2"
 fi
 
 if [ "$failures" -ne 0 ]; then

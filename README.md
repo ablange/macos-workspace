@@ -125,6 +125,7 @@ M04 is implemented. `make macos` applies a small, curated set of reversible Find
 Failure handling:
 
 - A key that `defaults read` reports as absent is written. If a read fails for any other reason, that key is left unchanged, the `defaults` error is printed, the remaining keys are still processed, and the run exits 1.
+- If a write fails, the `defaults` error is printed with the domain and key, successful writes are left intact, remaining keys are still processed, and only groups with a successful write are restarted. The run exits 1.
 - Finder and Dock restarts are attempted independently; a Finder failure never skips the Dock attempt. If a restart fails, the preferences are already written but not yet visible, and the run exits 1 with the exact retry command.
 - Because a later run sees converged values and restarts nothing, retry a failed restart explicitly: `MACOS_RESTART=finder make macos`, `MACOS_RESTART=dock make macos`, or `MACOS_RESTART=finder,dock make macos`. The variable only adds a restart; it never writes anything, and any other value is rejected before the run starts.
 

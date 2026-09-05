@@ -31,6 +31,7 @@ EOF
 finder_changed=0
 dock_changed=0
 read_failures=0
+write_failures=0
 
 # Read one preference. Sets `current` and returns 0 when the key exists,
 # 1 when defaults reports it absent, and 2 on any other failure. On
@@ -57,7 +58,7 @@ ensure_default() {
   local key="$3"
   local type="$4"
   local value="$5"
-  local current desired read_status=0
+  local current desired read_status=0 write_status=0 write_output
 
   read_default "$domain" "$key" || read_status=$?
   if [ "$read_status" -eq 2 ]; then
@@ -90,7 +91,15 @@ ensure_default() {
     return 0
   fi
 
-  defaults write "$domain" "$key" "-$type" "$value"
+  write_output="$(defaults write "$domain" "$key" "-$type" "$value" 2>&1)" || write_status=$?
+  if [ "$write_status" -ne 0 ]; then
+    echo "macos: cannot write $domain $key" >&2
+    if [ -n "$write_output" ]; then
+      printf '%s\n' "$write_output" >&2
+    fi
+    write_failures=$((write_failures + 1))
+    return 0
+  fi
   if [ "$read_status" -eq 0 ]; then
     echo "macos: set $domain $key to $value (was $current)"
   else
@@ -164,6 +173,10 @@ echo "macos: input, appearance, and security/privacy settings are intentionally 
 exit_status=0
 if [ "$read_failures" -ne 0 ]; then
   echo "macos: $read_failures preference(s) could not be read and were left unchanged; fix the error above and rerun make macos" >&2
+  exit_status=1
+fi
+if [ "$write_failures" -ne 0 ]; then
+  echo "macos: $write_failures preference(s) could not be written; successful writes are left intact; fix the error above and rerun make macos" >&2
   exit_status=1
 fi
 if [ -n "$restart_failed" ]; then
