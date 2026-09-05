@@ -1,7 +1,7 @@
 ---
 title: Repository architecture
 status: active
-updated: 2026-09-02
+updated: 2026-09-05
 ---
 
 # Repository architecture
@@ -12,7 +12,7 @@ updated: 2026-09-02
 | --- | --- |
 | `Makefile` | Human interface. Each target delegates to one script. |
 | `Brewfile` | Declarative package layer. Populated in M01. |
-| `scripts/` | Executable automation. `lint.sh`, `test.sh`, `prerequisites.sh`, `brew.sh`, `git_pull.sh`, `shell.sh`, `git.sh`, and `python.sh` exist today; later milestones add remaining installers and `doctor`. |
+| `scripts/` | Executable automation. `lint.sh`, `test.sh`, `prerequisites.sh`, `brew.sh`, `git_pull.sh`, `shell.sh`, `git.sh`, `python.sh`, and `macos/defaults.sh` exist today; later milestones add remaining installers and `doctor`. |
 | `python/` | Pinned workstation Python version (`python/version`). |
 | `shell/` | Sourced Bash configuration. `shell/bash/.bashrc` loads `shell/bash/.bashrc.d/{0-setup,1-git,2-pyenv,3-ps1}.sh` then `~/.bashrc.local`. `0-setup.sh` holds aliases and adds `$HOME/.local/bin` to `PATH`. Never sets strict-mode flags. |
 | `git/` | Portable Git configuration. `git/.gitconfig`, `git/.gitconfig.local.example`, and `git/ignore`. |
@@ -42,7 +42,7 @@ Make is the entry point. Recipes contain no logic beyond invoking a script. Scri
 
 ## Eventual bootstrap sequence
 
-This sequence is the target architecture. `help`, `lint`, `test`, `prerequisites`, `brew`, `shell`, `git`, `git_pull`, and `python` are implemented. `git_pull` is a convenience target, not part of bootstrap.
+This sequence is the target architecture. `help`, `lint`, `test`, `prerequisites`, `brew`, `shell`, `git`, `git_pull`, `python`, and `macos` are implemented. `git_pull` is a convenience target, not part of bootstrap.
 
 ```mermaid
 flowchart LR

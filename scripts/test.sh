@@ -50,6 +50,8 @@ required_files=(
   git/.gitconfig.local.example
   git/ignore
   knowledge/decisions/0003-shell-and-git-indirection.md
+  scripts/macos/defaults.sh
+  knowledge/decisions/0004-macos-defaults-policy.md
 )
 for file in "${required_files[@]}"; do
   if [ -e "$file" ]; then
@@ -369,6 +371,67 @@ if make -n python | grep -Eq '^[[:space:]]*\./scripts/python\.sh$'; then
   pass "Makefile python recipe is ./scripts/python.sh"
 else
   fail "Makefile python recipe must be a single ./scripts/python.sh line"
+fi
+
+if make -n macos | grep -Eq '^[[:space:]]*\./scripts/macos/defaults\.sh$'; then
+  pass "Makefile macos recipe is ./scripts/macos/defaults.sh"
+else
+  fail "Makefile macos recipe must be a single ./scripts/macos/defaults.sh line"
+fi
+
+macos_script="scripts/macos/defaults.sh"
+# Needles that must not appear in the macos script.
+if grep -E 'defaults delete|sudo|-currentHost|osascript|reboot|logout|shutdown' "$macos_script" >/dev/null; then
+  fail "$macos_script must not use delete, sudo, -currentHost, osascript, or reboot/logout"
+else
+  pass "$macos_script has no forbidden destructive patterns"
+fi
+
+if grep -E '(^|[[:space:]])rm[[:space:]]' "$macos_script" >/dev/null; then
+  fail "$macos_script must not invoke rm"
+else
+  pass "$macos_script does not invoke rm"
+fi
+
+write_hits="$(grep -c 'defaults write' "$macos_script" || true)"
+if [ "$write_hits" = "1" ]; then
+  pass "$macos_script has one write helper call site"
+else
+  fail "$macos_script must contain exactly one write helper call site; found $write_hits"
+fi
+
+kill_bad=0
+kill_finder=0
+kill_dock=0
+while IFS= read -r line; do
+  [ -n "$line" ] || continue
+  case "$line" in
+    *'killall Finder'*)
+      kill_finder=1
+      ;;
+    *'killall Dock'*)
+      kill_dock=1
+      ;;
+    *)
+      kill_bad=1
+      ;;
+  esac
+done <<EOF
+$(grep 'killall' "$macos_script" || true)
+EOF
+if [ "$kill_bad" -eq 0 ] && [ "$kill_finder" -eq 1 ] && [ "$kill_dock" -eq 1 ]; then
+  pass "$macos_script restart targets are only Finder and Dock"
+else
+  fail "$macos_script must restart only Finder and Dock"
+fi
+
+# Command tokens are split so this file is not a self-match.
+def_bin="def""aults"
+kill_bin="kill""all"
+if grep -E "(^|[[:space:]])(${def_bin}|${kill_bin})[[:space:]]" scripts/test.sh >/dev/null; then
+  fail "scripts/test.sh must not invoke the workstation ${def_bin}/${kill_bin} binaries"
+else
+  pass "scripts/test.sh does not invoke the workstation ${def_bin}/${kill_bin} binaries"
 fi
 
 pyenv_tok="pyenv"
@@ -1033,6 +1096,150 @@ if [ ! -e "$work/.bashrc" ] && [ ! -e "$work/.bash_profile" ]; then
   pass "python.sh switch-global does not create .bashrc or .bash_profile"
 else
   fail "python.sh switch-global created .bashrc or .bash_profile"
+fi
+
+install_fake_defaults() {
+  local work="$1"
+  mkdir -p "$work/bin"
+  cat > "$work/bin/defaults" <<'EOF'
+#!/bin/sh
+state="${FAKE_DEFAULTS_STATE:?}"
+log="${FAKE_DEFAULTS_LOG:?}"
+cmd="$1"
+shift
+case "$cmd" in
+  read)
+    domain="$1"
+    key="$2"
+    if [ -f "$state" ]; then
+      while IFS= read -r line; do
+        case "$line" in
+          "$domain $key="*)
+            printf '%s\n' "${line#*=}"
+            exit 0
+            ;;
+        esac
+      done < "$state"
+    fi
+    exit 1
+    ;;
+  write)
+    domain="$1"
+    key="$2"
+    typ="$3"
+    val="$4"
+    printf 'write %s %s %s %s\n' "$domain" "$key" "$typ" "$val" >> "$log"
+    stored="$val"
+    if [ "$typ" = "-bool" ]; then
+      case "$val" in
+        true|yes|1) stored=1 ;;
+        false|no|0) stored=0 ;;
+      esac
+    fi
+    tmp="${state}.tmp"
+    if [ -f "$state" ]; then
+      while IFS= read -r line; do
+        case "$line" in
+          "$domain $key="*) ;;
+          *) printf '%s\n' "$line" ;;
+        esac
+      done < "$state" > "$tmp"
+      mv "$tmp" "$state"
+    fi
+    printf '%s %s=%s\n' "$domain" "$key" "$stored" >> "$state"
+    ;;
+esac
+EOF
+  chmod +x "$work/bin/defaults"
+  : > "$work/defaults-state"
+  : > "$work/defaults.log"
+}
+
+install_fake_killall() {
+  local work="$1"
+  mkdir -p "$work/bin"
+  cat > "$work/bin/killall" <<'EOF'
+#!/bin/sh
+printf '%s\n' "$*" >> "${FAKE_KILLALL_LOG:?}"
+EOF
+  chmod +x "$work/bin/killall"
+  : > "$work/killall.log"
+}
+
+seed_finder_defaults_state() {
+  local work="$1"
+  cat > "$work/defaults-state" <<'EOF'
+NSGlobalDomain AppleShowAllExtensions=1
+com.apple.finder FXPreferredViewStyle=Nlsv
+com.apple.finder ShowHardDrivesOnDesktop=1
+com.apple.finder ShowExternalHardDrivesOnDesktop=1
+com.apple.finder ShowRemovableMediaOnDesktop=1
+com.apple.finder ShowMountedServersOnDesktop=1
+EOF
+}
+
+run_macos_sh() {
+  local work="$1"
+  env -i \
+    HOME="$work" \
+    PATH="$work/bin:/bin" \
+    FAKE_DEFAULTS_STATE="$work/defaults-state" \
+    FAKE_DEFAULTS_LOG="$work/defaults.log" \
+    FAKE_KILLALL_LOG="$work/killall.log" \
+    ./scripts/macos/defaults.sh
+}
+
+count_log_lines() {
+  local file="$1"
+  local pattern="$2"
+  grep -c "$pattern" "$file" 2>/dev/null || true
+}
+
+work="$(mktemp -d "$TMP_HOME/macos-fresh.XXXXXX")"
+install_fake_defaults "$work"
+install_fake_killall "$work"
+status=0
+out="$(run_macos_sh "$work" 2>&1)" || status=$?
+writes="$(count_log_lines "$work/defaults.log" '^write ')"
+finder_kills="$(count_log_lines "$work/killall.log" '^Finder$')"
+dock_kills="$(count_log_lines "$work/killall.log" '^Dock$')"
+if [ "$status" -eq 0 ] && [ "$writes" = "7" ] && [ "$finder_kills" = "1" ] && [ "$dock_kills" = "1" ]; then
+  pass "macos.sh fresh writes 7 keys and restarts Finder and Dock once"
+else
+  fail "macos.sh fresh expected 7 writes and one Finder/Dock restart; status=$status writes=$writes finder=$finder_kills dock=$dock_kills"
+fi
+
+work="$(mktemp -d "$TMP_HOME/macos-converged.XXXXXX")"
+install_fake_defaults "$work"
+install_fake_killall "$work"
+seed_finder_defaults_state "$work"
+printf '%s\n' 'com.apple.dock autohide=1' >> "$work/defaults-state"
+status=0
+out="$(run_macos_sh "$work" 2>&1)" || status=$?
+writes="$(count_log_lines "$work/defaults.log" '^write ')"
+kills="$(count_log_lines "$work/killall.log" '.')"
+if [ "$status" -eq 0 ] && [ "$writes" = "0" ] && [ "$kills" = "0" ] &&
+  printf '%s\n' "$out" | grep -q 'already'; then
+  pass "macos.sh converged writes nothing, restarts nothing, and reports already"
+else
+  fail "macos.sh converged expected 0 writes, 0 restarts, and already; status=$status writes=$writes kills=$kills"
+fi
+
+work="$(mktemp -d "$TMP_HOME/macos-partial.XXXXXX")"
+install_fake_defaults "$work"
+install_fake_killall "$work"
+seed_finder_defaults_state "$work"
+status=0
+out="$(run_macos_sh "$work" 2>&1)" || status=$?
+writes="$(count_log_lines "$work/defaults.log" '^write ')"
+finder_kills="$(count_log_lines "$work/killall.log" '^Finder$')"
+dock_kills="$(count_log_lines "$work/killall.log" '^Dock$')"
+if [ "$status" -eq 0 ] && [ "$writes" = "1" ] && [ "$dock_kills" = "1" ] && [ "$finder_kills" = "0" ] &&
+  printf '%s\n' "$out" | grep -q 'restarting Dock' &&
+  printf '%s\n' "$out" | grep -q 'Finder unchanged; not restarted'; then
+  pass "macos.sh partial autohide drift writes once and restarts only Dock"
+else
+  fail "macos.sh partial expected 1 write and Dock-only restart; status=$status writes=$writes finder=$finder_kills dock=$dock_kills"
 fi
 
 if [ "$failures" -ne 0 ]; then
