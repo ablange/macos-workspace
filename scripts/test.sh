@@ -1111,6 +1111,13 @@ case "$cmd" in
   read)
     domain="$1"
     key="$2"
+    printf 'read %s %s\n' "$domain" "$key" >> "$log"
+    # FAKE_DEFAULTS_READ_FAIL="<domain> <key>" simulates a read failure
+    # that is not a missing key (for example a preferences daemon error).
+    if [ "${FAKE_DEFAULTS_READ_FAIL:-}" = "$domain $key" ]; then
+      printf '%s\n' "fake defaults: could not read preferences for $domain" >&2
+      exit 1
+    fi
     if [ -f "$state" ]; then
       while IFS= read -r line; do
         case "$line" in
@@ -1121,6 +1128,9 @@ case "$cmd" in
         esac
       done < "$state"
     fi
+    # Mirror the real two-line diagnostic for an absent key or domain.
+    printf '%s\n' "2026-01-01 00:00:00.000 defaults[1:1] " >&2
+    printf '%s\n' "The domain/default pair of ($domain, $key) does not exist" >&2
     exit 1
     ;;
   write)
@@ -1161,6 +1171,12 @@ install_fake_killall() {
   cat > "$work/bin/killall" <<'EOF'
 #!/bin/sh
 printf '%s\n' "$*" >> "${FAKE_KILLALL_LOG:?}"
+# FAKE_KILLALL_FAIL="Finder" (or "Dock") makes that restart attempt fail
+# after logging it, mirroring the real "no matching processes" failure.
+if [ "${FAKE_KILLALL_FAIL:-}" = "$*" ]; then
+  printf '%s\n' "No matching processes belonging to you were found" >&2
+  exit 1
+fi
 EOF
   chmod +x "$work/bin/killall"
   : > "$work/killall.log"
@@ -1178,14 +1194,20 @@ com.apple.finder ShowMountedServersOnDesktop=1
 EOF
 }
 
+# Failure injection and the retry variable are passed through explicitly
+# because env -i clears the environment. Callers set them as a prefix:
+#   FAKE_KILLALL_FAIL=Finder run_macos_sh "$work"
 run_macos_sh() {
   local work="$1"
   env -i \
     HOME="$work" \
-    PATH="$work/bin:/bin" \
+    PATH="$work/bin:/bin:/usr/bin" \
     FAKE_DEFAULTS_STATE="$work/defaults-state" \
     FAKE_DEFAULTS_LOG="$work/defaults.log" \
     FAKE_KILLALL_LOG="$work/killall.log" \
+    FAKE_DEFAULTS_READ_FAIL="${FAKE_DEFAULTS_READ_FAIL:-}" \
+    FAKE_KILLALL_FAIL="${FAKE_KILLALL_FAIL:-}" \
+    MACOS_RESTART="${MACOS_RESTART:-}" \
     ./scripts/macos/defaults.sh
 }
 
@@ -1240,6 +1262,146 @@ if [ "$status" -eq 0 ] && [ "$writes" = "1" ] && [ "$dock_kills" = "1" ] && [ "$
   pass "macos.sh partial autohide drift writes once and restarts only Dock"
 else
   fail "macos.sh partial expected 1 write and Dock-only restart; status=$status writes=$writes finder=$finder_kills dock=$dock_kills"
+fi
+if printf '%s\n' "$out" | grep -q 'set com.apple.dock autohide to true (was unset)' &&
+  ! printf '%s\n' "$out" | grep -q 'does not exist'; then
+  pass "macos.sh writes a genuinely missing key and hides the expected does-not-exist message"
+else
+  fail "macos.sh missing key: expected a '(was unset)' write without leaking 'does not exist'"
+fi
+
+work="$(mktemp -d "$TMP_HOME/macos-finder-restart-fails.XXXXXX")"
+install_fake_defaults "$work"
+install_fake_killall "$work"
+status=0
+out="$(FAKE_KILLALL_FAIL=Finder run_macos_sh "$work" 2>&1)" || status=$?
+writes="$(count_log_lines "$work/defaults.log" '^write ')"
+finder_kills="$(count_log_lines "$work/killall.log" '^Finder$')"
+dock_kills="$(count_log_lines "$work/killall.log" '^Dock$')"
+if [ "$status" -ne 0 ] && [ "$writes" = "7" ] && [ "$finder_kills" = "1" ] && [ "$dock_kills" = "1" ]; then
+  pass "macos.sh Finder restart failure still attempts the Dock restart and exits non-zero"
+else
+  fail "macos.sh Finder restart failure: expected non-zero, 7 writes, Finder and Dock attempted; status=$status writes=$writes finder=$finder_kills dock=$dock_kills"
+fi
+if printf '%s\n' "$out" | grep -q 'Finder restart failed' &&
+  printf '%s\n' "$out" | grep -q 'MACOS_RESTART=finder make macos' &&
+  ! printf '%s\n' "$out" | grep -q 'Dock restart failed'; then
+  pass "macos.sh Finder restart failure reports Finder only and names the retry command"
+else
+  fail "macos.sh Finder restart failure did not report Finder only with a retry command"
+fi
+
+# Defaults have now converged in this HOME. A plain rerun must not restart
+# anything; the explicit MACOS_RESTART retry must restart only Finder.
+: > "$work/defaults.log"
+: > "$work/killall.log"
+status=0
+out="$(run_macos_sh "$work" 2>&1)" || status=$?
+writes="$(count_log_lines "$work/defaults.log" '^write ')"
+kills="$(count_log_lines "$work/killall.log" '.')"
+if [ "$status" -eq 0 ] && [ "$writes" = "0" ] && [ "$kills" = "0" ]; then
+  pass "macos.sh plain rerun after a restart failure writes nothing and restarts nothing"
+else
+  fail "macos.sh plain rerun after restart failure: expected 0 writes and 0 restarts; status=$status writes=$writes kills=$kills"
+fi
+: > "$work/defaults.log"
+: > "$work/killall.log"
+status=0
+out="$(MACOS_RESTART=finder run_macos_sh "$work" 2>&1)" || status=$?
+writes="$(count_log_lines "$work/defaults.log" '^write ')"
+finder_kills="$(count_log_lines "$work/killall.log" '^Finder$')"
+dock_kills="$(count_log_lines "$work/killall.log" '^Dock$')"
+if [ "$status" -eq 0 ] && [ "$writes" = "0" ] && [ "$finder_kills" = "1" ] && [ "$dock_kills" = "0" ] &&
+  printf '%s\n' "$out" | grep -q 'restarting Finder (requested by MACOS_RESTART)'; then
+  pass "macos.sh MACOS_RESTART=finder retries only the Finder restart on a converged HOME"
+else
+  fail "macos.sh MACOS_RESTART=finder retry: expected 0 writes, Finder only; status=$status writes=$writes finder=$finder_kills dock=$dock_kills"
+fi
+
+work="$(mktemp -d "$TMP_HOME/macos-dock-restart-fails.XXXXXX")"
+install_fake_defaults "$work"
+install_fake_killall "$work"
+seed_finder_defaults_state "$work"
+status=0
+out="$(FAKE_KILLALL_FAIL=Dock run_macos_sh "$work" 2>&1)" || status=$?
+writes="$(count_log_lines "$work/defaults.log" '^write ')"
+finder_kills="$(count_log_lines "$work/killall.log" '^Finder$')"
+dock_kills="$(count_log_lines "$work/killall.log" '^Dock$')"
+if [ "$status" -ne 0 ] && [ "$writes" = "1" ] && [ "$finder_kills" = "0" ] && [ "$dock_kills" = "1" ] &&
+  printf '%s\n' "$out" | grep -q 'Dock restart failed' &&
+  printf '%s\n' "$out" | grep -q 'MACOS_RESTART=dock make macos' &&
+  ! printf '%s\n' "$out" | grep -q 'Finder restart failed'; then
+  pass "macos.sh Dock restart failure exits non-zero and names the dock retry command"
+else
+  fail "macos.sh Dock restart failure: expected non-zero, 1 write, Dock-only attempt and report; status=$status writes=$writes finder=$finder_kills dock=$dock_kills"
+fi
+: > "$work/defaults.log"
+: > "$work/killall.log"
+status=0
+out="$(MACOS_RESTART=finder,dock run_macos_sh "$work" 2>&1)" || status=$?
+finder_kills="$(count_log_lines "$work/killall.log" '^Finder$')"
+dock_kills="$(count_log_lines "$work/killall.log" '^Dock$')"
+writes="$(count_log_lines "$work/defaults.log" '^write ')"
+if [ "$status" -eq 0 ] && [ "$writes" = "0" ] && [ "$finder_kills" = "1" ] && [ "$dock_kills" = "1" ]; then
+  pass "macos.sh MACOS_RESTART=finder,dock restarts both without writing"
+else
+  fail "macos.sh MACOS_RESTART=finder,dock: expected 0 writes and both restarts; status=$status writes=$writes finder=$finder_kills dock=$dock_kills"
+fi
+
+work="$(mktemp -d "$TMP_HOME/macos-restart-invalid.XXXXXX")"
+install_fake_defaults "$work"
+install_fake_killall "$work"
+status=0
+out="$(MACOS_RESTART=safari run_macos_sh "$work" 2>&1)" || status=$?
+writes="$(count_log_lines "$work/defaults.log" '^write ')"
+kills="$(count_log_lines "$work/killall.log" '.')"
+if [ "$status" -ne 0 ] && [ "$writes" = "0" ] && [ "$kills" = "0" ] &&
+  printf '%s\n' "$out" | grep -q 'MACOS_RESTART accepts finder and/or dock'; then
+  pass "macos.sh rejects an unknown MACOS_RESTART value before writing or restarting"
+else
+  fail "macos.sh unknown MACOS_RESTART: expected non-zero with 0 writes and 0 restarts; status=$status writes=$writes kills=$kills"
+fi
+
+work="$(mktemp -d "$TMP_HOME/macos-read-error.XXXXXX")"
+install_fake_defaults "$work"
+install_fake_killall "$work"
+status=0
+out="$(FAKE_DEFAULTS_READ_FAIL='com.apple.finder FXPreferredViewStyle' run_macos_sh "$work" 2>&1)" || status=$?
+writes="$(count_log_lines "$work/defaults.log" '^write ')"
+bad_writes="$(count_log_lines "$work/defaults.log" '^write com.apple.finder FXPreferredViewStyle ')"
+finder_kills="$(count_log_lines "$work/killall.log" '^Finder$')"
+dock_kills="$(count_log_lines "$work/killall.log" '^Dock$')"
+if [ "$status" -ne 0 ] && [ "$bad_writes" = "0" ] && [ "$writes" = "6" ]; then
+  pass "macos.sh read error exits non-zero and skips the write for that preference only"
+else
+  fail "macos.sh read error: expected non-zero, 0 writes for the failing key, 6 others; status=$status writes=$writes bad_writes=$bad_writes"
+fi
+if [ "$finder_kills" = "1" ] && [ "$dock_kills" = "1" ]; then
+  pass "macos.sh read error still restarts groups that were written"
+else
+  fail "macos.sh read error: expected Finder and Dock restarts for written groups; finder=$finder_kills dock=$dock_kills"
+fi
+if printf '%s\n' "$out" | grep -q 'cannot read com.apple.finder FXPreferredViewStyle' &&
+  printf '%s\n' "$out" | grep -q 'could not read preferences for com.apple.finder' &&
+  printf '%s\n' "$out" | grep -q '1 preference(s) could not be read'; then
+  pass "macos.sh read error surfaces the read diagnostic and a summary"
+else
+  fail "macos.sh read error did not surface the read diagnostic and summary"
+fi
+
+work="$(mktemp -d "$TMP_HOME/macos-read-error-converged.XXXXXX")"
+install_fake_defaults "$work"
+install_fake_killall "$work"
+seed_finder_defaults_state "$work"
+printf '%s\n' 'com.apple.dock autohide=1' >> "$work/defaults-state"
+status=0
+out="$(FAKE_DEFAULTS_READ_FAIL='com.apple.dock autohide' run_macos_sh "$work" 2>&1)" || status=$?
+writes="$(count_log_lines "$work/defaults.log" '^write ')"
+kills="$(count_log_lines "$work/killall.log" '.')"
+if [ "$status" -ne 0 ] && [ "$writes" = "0" ] && [ "$kills" = "0" ]; then
+  pass "macos.sh read error on a converged HOME writes nothing and restarts nothing"
+else
+  fail "macos.sh read error on converged HOME: expected non-zero, 0 writes, 0 restarts; status=$status writes=$writes kills=$kills"
 fi
 
 if [ "$failures" -ne 0 ]; then
