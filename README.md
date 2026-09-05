@@ -1,6 +1,6 @@
 # macos-workspace
 
-A macOS developer workstation, defined in Git: Homebrew packages and applications, Bash configuration, portable Git settings, a pinned Python version, and a few Finder and Dock preferences.
+A macOS developer workstation, defined in Git: Homebrew packages and applications, Bash configuration, portable Git settings, a pinned Python version, and a few specific macOS preferences (e.g., Finder, Dock).
 
 Rebuilding a developer Mac by hand takes hours and is easy to get wrong. The decisions that make the machine yours are spread across package lists, shell files, Git settings, and system preferences, and most of them are never written down.
 
@@ -32,19 +32,15 @@ Start from a Mac with the Xcode Command Line Tools:
 xcode-select --install
 ```
 
-This provides `git` and `make`. Nothing else needs to be installed by hand: `make prerequisites` installs Homebrew if it is missing, and the `Brewfile` supplies the rest, including `gh`, `pyenv`, `pipx`, and Docker Desktop.
-
-## Installation
-
-### 1. Use Bash as your login shell
-
-The shell configuration in this repository is for Bash. macOS ships with zsh as the default login shell. Switch to Bash, then open a new terminal window:
+Use Bash as your login shell
 
 ```bash
 chsh -s /bin/bash
 ```
 
-### 2. Clone the repository
+## Installation
+
+### 1. Clone the repository
 
 ```bash
 mkdir -p "$HOME/repos"
@@ -52,37 +48,61 @@ git clone https://github.com/ablange/macos-workspace.git "$HOME/repos/macos-work
 cd "$HOME/repos/macos-workspace"
 ```
 
-The clone can live anywhere; the commands below assume this path.
-
-### 3. Run the bootstrap
+### 2. Run the bootstrap
 
 ```bash
 make bootstrap
 ```
 
-If `prerequisites` installs Homebrew, the bootstrap stops there because `brew` is not yet on `PATH`. Follow the Next steps printed by the Homebrew installer, open a new terminal window, and run `make bootstrap` again.
+> [!WARNING]
+> If `prerequisites` installs Homebrew, the bootstrap stops there because `brew` is not yet on `PATH`. Follow the Next steps printed by the Homebrew installer, open a new terminal window, and run `make bootstrap` again.
 
-### 4. Load the Bash configuration
+### 3. Load the Bash configuration
 
-`make shell` prints the line to add and never edits your files. For the clone path above, add this line to `~/.bashrc`:
+Append this to your `~/.bashrc`:
 
-```bash
+```text
+cat <<'EOF' >> ~/.bashrc
+
+# Shell configuration for macos-workspace
 source "$HOME/repos/macos-workspace/shell/bash/.bashrc"
+
+EOF
 ```
 
-Terminal opens login shells, which read `~/.bash_profile` rather than `~/.bashrc`. If `~/.bash_profile` does not already source `~/.bashrc`, add:
+Then run:
 
 ```bash
 source ~/.bashrc
 ```
 
-Open a new terminal window. `make shell` is read-only, so you can rerun it at any time to check this wiring.
+> [!NOTE]
+> Each terminal opens with a ready prompt, aliases, completions, and the right `PATH`—no manual setup needed.
 
-### 5. Finish the manual steps
+
+### 4. Finish the manual steps
 
 Some setup stays manual because it involves authentication, first-run dialogs, or Privacy & Security permissions: your Git identity in `~/.gitconfig.local`, an optional `~/.bashrc.local`, `gh auth login`, Docker Desktop's first run, optional AWS, Databricks, and Astronomer logins, and the Accessibility permission for Rectangle. Follow [docs/manual-setup.md](docs/manual-setup.md).
 
-## Verification
+## Make targets
+
+| Target | Purpose |
+| --- | --- |
+| `help` | Show available targets |
+| `lint` | Run static checks |
+| `test` | Run repository invariant tests |
+| `prerequisites` | Verify Xcode Command Line Tools and install Homebrew if missing |
+| `brew` | Install missing `Brewfile` packages; no proactive upgrade or cleanup |
+| `shell` | Print the Bash `source` line to add; never edits `~/.bashrc` |
+| `git` | Add one idempotent `include.path` and link the global ignore file |
+| `python` | Install the pinned pyenv Python if missing and set `pyenv global` |
+| `macos` | Apply curated, reversible Finder and Dock defaults; restart only on change |
+| `bootstrap` | Run the automated setup targets in dependency order |
+| `git_pull` | Refresh local `main` after a PR merge |
+
+`git_pull` is a maintainer convenience: it checks out `main`, pulls `origin main`, then prunes stale remote-tracking references with `git fetch -p`. It is not part of `bootstrap`.
+
+## Verifying the repository
 
 From the repository root:
 
@@ -94,7 +114,41 @@ make lint test
 
 Neither target changes your machine. They prove the repository is internally consistent and its scripts behave as specified, not that a particular Mac is fully configured. The only end-to-end check is a real bootstrap on a clean macOS user or virtual machine.
 
-## What the bootstrap changes
+
+## Maintaining the repository
+
+- Edit the `Brewfile` by hand; never generate it with `brew bundle dump`. Keep every cask gated on its `/Applications` bundle. Do not declare Homebrew Python interpreters or the standalone `docker`, `docker-compose`, or `podman` formulae; pyenv and Docker Desktop own those.
+- Add a macOS preference as one `ensure_default` call in `scripts/macos/defaults.sh` plus a row in the table above with its inverse. Restart only Finder or Dock.
+- Scripts under `scripts/` use `#!/usr/bin/env bash` and `set -euo pipefail` and must be idempotent. Sourced files under `shell/` never set strict-mode flags.
+- Everything must run on system Bash 3.2 and GNU Make 3.81, so avoid newer features such as `mapfile`, associative arrays, `.ONESHELL`, and `$(file ...)`. Never hard-code a Homebrew prefix; use `brew --prefix` or `brew shellenv`.
+- Never replace or append to `~/.bashrc` or `~/.gitconfig` from code. No `rm -rf` on user paths, `defaults delete`, `sudo`, or `killall` beyond Finder and Dock. Tests must never mutate the machine.
+- Run `make lint test` before pushing. CI runs the same checks on `macos-latest` for pull requests and pushes to `main`. Record architecture decisions in `knowledge/decisions/`.
+
+Prefer small changes. If a setting is brittle, security-sensitive, rarely changed, or easier to do by hand than to maintain in code, document it instead of automating it.
+
+
+## Methodology
+
+> Automate high-value, stable configuration. Document brittle or infrequent configuration.
+
+Each managed area uses the tool that already owns it: Homebrew and a `Brewfile` for software, Bash fragments for the shell, Git's own `include` for Git, pyenv for Python, and `defaults` for macOS preferences. Make is the human interface. Each setup target runs one script, each script is idempotent, and each can be read in a few minutes. That keeps the workstation definition small enough for a person, or a coding agent, to understand and change safely.
+
+Configuration that is personal, security-sensitive, unstable, or rarely performed lives in [docs/manual-setup.md](docs/manual-setup.md) instead of code. Out of scope: configuration-management stacks such as Nix, Ansible, or MDM; dotfiles frameworks; cross-platform support; project IDE configuration; Git identity; cloud logins; and secrets of any kind.
+
+### Machine-local configuration
+
+Two untracked files hold everything personal:
+
+| File | Holds | Loaded by |
+| --- | --- | --- |
+| `~/.gitconfig.local` | `user.name`, `user.email`, other host-specific Git settings | `git/.gitconfig`, included last |
+| `~/.bashrc.local` | Local shell settings and overrides | `shell/bash/.bashrc`, sourced last |
+
+`git/.gitconfig.local.example` and `shell/bash/.bashrc.local.example` show the expected shape. `.gitignore` also excludes copies of the real files inside the repository as a safety net.
+
+`git/.gitconfig` contains no `user.*` or `credential.*` keys; the tests enforce this. Credentials stay with Git's credential helper, the macOS Keychain, `gh auth`, and each tool's own login. Homebrew records the two tap trusts in `~/.homebrew/trust.json`, outside the repository. The repository holds no passwords, tokens, or keys.
+
+### What the bootstrap changes
 
 **Homebrew.** `make brew` runs `brew bundle install --no-upgrade` and never runs `bundle cleanup`, `autoremove`, `--force`, or `--adopt`. Installing a missing package can still upgrade a dependency it requires. Each cask is declared only when its application is absent from `/Applications`; applications already there are left unmanaged and untouched. Two formulae come from third-party taps, Astronomer and Databricks, and each is marked `trusted: true` individually.
 
@@ -118,46 +172,8 @@ Neither target changes your machine. They prove the repository is internally con
 
 Revert a key with `defaults write` and its inverse, then restart Finder or Dock, or change it in System Settings. If a restart fails after a write, retry it with `MACOS_RESTART=finder make macos`, `MACOS_RESTART=dock make macos`, or `MACOS_RESTART=finder,dock make macos`; the variable only restarts and never writes. Input, appearance, and security or privacy settings are not automated.
 
-## Make targets
 
-| Target | Purpose |
-| --- | --- |
-| `help` | Show available targets |
-| `lint` | Run static checks |
-| `test` | Run repository invariant tests |
-| `prerequisites` | Verify Xcode Command Line Tools and install Homebrew if missing |
-| `brew` | Install missing `Brewfile` packages; no proactive upgrade or cleanup |
-| `shell` | Print the Bash `source` line to add; never edits `~/.bashrc` |
-| `git` | Add one idempotent `include.path` and link the global ignore file |
-| `python` | Install the pinned pyenv Python if missing and set `pyenv global` |
-| `macos` | Apply curated, reversible Finder and Dock defaults; restart only on change |
-| `bootstrap` | Run the automated setup targets in dependency order |
-| `git_pull` | Refresh local `main` after a PR merge |
-
-`git_pull` is a maintainer convenience: it checks out `main`, pulls `origin main`, then prunes stale remote-tracking references with `git fetch -p`. It is not part of `bootstrap`.
-
-## Methodology
-
-> Automate high-value, stable configuration. Document brittle or infrequent configuration.
-
-Each managed area uses the tool that already owns it: Homebrew and a `Brewfile` for software, Bash fragments for the shell, Git's own `include` for Git, pyenv for Python, and `defaults` for macOS preferences. Make is the human interface. Each setup target runs one script, each script is idempotent, and each can be read in a few minutes. That keeps the workstation definition small enough for a person, or a coding agent, to understand and change safely.
-
-Configuration that is personal, security-sensitive, unstable, or rarely performed lives in [docs/manual-setup.md](docs/manual-setup.md) instead of code. Out of scope: configuration-management stacks such as Nix, Ansible, or MDM; dotfiles frameworks; cross-platform support; project IDE configuration; Git identity; cloud logins; and secrets of any kind.
-
-## Machine-local configuration
-
-Two untracked files hold everything personal:
-
-| File | Holds | Loaded by |
-| --- | --- | --- |
-| `~/.gitconfig.local` | `user.name`, `user.email`, other host-specific Git settings | `git/.gitconfig`, included last |
-| `~/.bashrc.local` | Local shell settings and overrides | `shell/bash/.bashrc`, sourced last |
-
-`git/.gitconfig.local.example` and `shell/bash/.bashrc.local.example` show the expected shape. `.gitignore` also excludes copies of the real files inside the repository as a safety net.
-
-`git/.gitconfig` contains no `user.*` or `credential.*` keys; the tests enforce this. Credentials stay with Git's credential helper, the macOS Keychain, `gh auth`, and each tool's own login. Homebrew records the two tap trusts in `~/.homebrew/trust.json`, outside the repository. The repository holds no passwords, tokens, or keys.
-
-## Updating your workstation
+### Updating your workstation
 
 The repository is meant to change as the machine changes. Edit the source of truth for the area, then apply it:
 
@@ -174,26 +190,23 @@ The workflow is: change the machine or the desired configuration → update the 
 
 Coding agents can help inspect the machine, update the repository, run the tests, and review diffs. [AGENTS.md](AGENTS.md) gives them the same rules maintainers follow.
 
-## Maintaining the repository
-
-- Edit the `Brewfile` by hand; never generate it with `brew bundle dump`. Keep every cask gated on its `/Applications` bundle. Do not declare Homebrew Python interpreters or the standalone `docker`, `docker-compose`, or `podman` formulae; pyenv and Docker Desktop own those.
-- Add a macOS preference as one `ensure_default` call in `scripts/macos/defaults.sh` plus a row in the table above with its inverse. Restart only Finder or Dock.
-- Scripts under `scripts/` use `#!/usr/bin/env bash` and `set -euo pipefail` and must be idempotent. Sourced files under `shell/` never set strict-mode flags.
-- Everything must run on system Bash 3.2 and GNU Make 3.81, so avoid newer features such as `mapfile`, associative arrays, `.ONESHELL`, and `$(file ...)`. Never hard-code a Homebrew prefix; use `brew --prefix` or `brew shellenv`.
-- Never replace or append to `~/.bashrc` or `~/.gitconfig` from code. No `rm -rf` on user paths, `defaults delete`, `sudo`, or `killall` beyond Finder and Dock. Tests must never mutate the machine.
-- Run `make lint test` before pushing. CI runs the same checks on `macos-latest` for pull requests and pushes to `main`. Record architecture decisions in `knowledge/decisions/`.
-
-Prefer small changes. If a setting is brittle, security-sensitive, rarely changed, or easier to do by hand than to maintain in code, document it instead of automating it.
 
 ## Risks
 
-1. **Existing workstation state can conflict with the managed configuration.** Homebrew packages, `PATH` entries, Git settings, and shell customizations may already exist in another form. Prefer a clean Mac. Otherwise read the files named in the warning above, inspect the order with `make -n bootstrap`, and run targets one at a time.
+- **Existing workstation state can conflict with the managed configuration.** Homebrew packages, `PATH` entries, Git settings, and shell customizations may already exist in another form. Prefer a clean Mac. Otherwise read the files named in the warning above, inspect the order with `make -n bootstrap`, and run targets one at a time.
 
-2. **`make brew` installs software, including from third-party taps.** It installs every missing `Brewfile` entry, and installing a missing package can upgrade dependencies it requires. Remove entries you do not want before running it. It never proactively upgrades declared packages, never removes packages, and leaves applications already in `/Applications` alone.
+- **`make brew` installs software, including from third-party taps.** It installs every missing `Brewfile` entry, and installing a missing package can upgrade dependencies it requires. Remove entries you do not want before running it. It never proactively upgrades declared packages, never removes packages, and leaves applications already in `/Applications` alone.
 
-3. **Shell and Git behavior changes without your files being replaced.** Sourcing the repository changes `PATH`, aliases, `PROMPT_COMMAND`, and the prompt. The Git include contributes aliases, `core.editor`, and `init.defaultBranch`; because Git keeps the last value it reads, the include can override the same keys set earlier in `~/.gitconfig`. Put overrides in `~/.bashrc.local` and `~/.gitconfig.local`, which load last. Removing one `source` line or one `include.path` disconnects the repository.
+- **Shell and Git behavior changes without your files being replaced.** Sourcing the repository changes `PATH`, aliases, `PROMPT_COMMAND`, and the prompt. The Git include contributes aliases, `core.editor`, and `init.defaultBranch`; because Git keeps the last value it reads, the include can override the same keys set earlier in `~/.gitconfig`. Put overrides in `~/.bashrc.local` and `~/.gitconfig.local`, which load last. Removing one `source` line or one `include.path` disconnects the repository.
 
-4. **`make macos` changes preferences for the current user and restarts Finder or Dock.** Only the seven keys listed above are touched. Each is read first, written only when it differs, and has a documented inverse.
+- **`make macos` changes preferences for the current user and restarts Finder or Dock.** Only the seven keys listed above are touched. Each is read first, written only when it differs, and has a documented inverse.
+
+
+## Future improvements
+
+- An end-to-end test on a clean macOS user profile or virtual machine. Today the only end-to-end check is a manual bootstrap.
+- Recorded macOS-version compatibility as new releases are tested.
+
 
 ## Uninstallation
 
@@ -220,10 +233,6 @@ data, or unrelated configuration. Show me the plan and its risks before
 changing anything.
 ```
 
-## Future improvements
-
-- An end-to-end test on a clean macOS user profile or virtual machine. Today the only end-to-end check is a manual bootstrap.
-- Recorded macOS-version compatibility as new releases are tested.
 
 ## License
 
