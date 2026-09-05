@@ -11,12 +11,13 @@ updated: 2026-09-05
 | Path | Role |
 | --- | --- |
 | `Makefile` | Human interface. Leaf targets each delegate to one script. `bootstrap` is a sequential recipe of those targets. |
-| `Brewfile` | Declarative package layer. Populated in M01. |
+| `Brewfile` | Declarative package layer. |
 | `scripts/` | Executable automation. `lint.sh`, `test.sh`, `prerequisites.sh`, `brew.sh`, `git_pull.sh`, `shell.sh`, `git.sh`, `python.sh`, and `macos/defaults.sh`. |
 | `python/` | Pinned workstation Python version (`python/version`). |
 | `shell/` | Sourced Bash configuration. `shell/bash/.bashrc` loads `shell/bash/.bashrc.d/{0-setup,1-git,2-pyenv,3-ps1}.sh` then `~/.bashrc.local`. `0-setup.sh` holds aliases and adds `$HOME/.local/bin` to `PATH`. Never sets strict-mode flags. |
 | `git/` | Portable Git configuration. `git/.gitconfig`, `git/.gitconfig.local.example`, and `git/ignore`. |
 | `docs/` | Manual setup that must not be automated ([docs/manual-setup.md](../../docs/manual-setup.md)). |
+| `.github/workflows/` | CI. Runs `make lint test` only. |
 | `knowledge/` | Durable architecture and decisions. Does not copy the roadmap. |
 
 Directories are created only when they have content.
@@ -42,7 +43,7 @@ Make is the entry point. Recipes contain no logic beyond invoking a script. Scri
 
 ## Bootstrap sequence
 
-`help`, `lint`, `test`, `prerequisites`, `brew`, `shell`, `git`, `git_pull`, `python`, `macos`, and `bootstrap` are implemented. `git_pull` is a convenience target, not part of bootstrap. `bootstrap` is a sequential recipe of `$(MAKE)` calls to the existing setup targets.
+`bootstrap` runs `prerequisites`, `brew`, `shell`, `git`, `python`, then `macos` as sequential `$(MAKE)` calls and stops at the first failure; `git_pull` is a maintainer convenience and is not part of that sequence.
 
 ```mermaid
 flowchart LR
