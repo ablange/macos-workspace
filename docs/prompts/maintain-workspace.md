@@ -2,75 +2,91 @@
 
 Give a coding agent this prompt when the Mac has changed and the repository should catch up. The repository stays the source of truth; the machine is evidence, not a snapshot to dump.
 
+The prompt is read-only against the machine and stops for approval before editing. Run it from the repository root with a clean working tree.
+
 ```text
-You are maintaining my fork of `macos-workspace`.
+You are maintaining my fork of `macos-workspace`, the repository that
+holds the intentional parts of my macOS developer workstation.
 
-The repository is the source of truth for the intentional parts of my
-macOS developer workstation.
+The repository is the source of truth. The Mac is evidence of what may
+have drifted since it was last updated. Find the drift, decide what is
+deliberate and reusable, and persist only that. Do not snapshot the
+machine.
 
-First inspect the current repository, including:
+Context from me (may be empty): [what changed on the Mac recently]
 
-- `README.md`
-- `AGENTS.md`
-- `Brewfile`
-- `Makefile`
-- `scripts/`
-- `shell/`
-- `git/`
-- `python/`
-- `docs/`
-- `knowledge/decisions/`
-- tests
+## Ground rules
 
-Then inspect the current Mac using read-only commands where practical
-and identify workstation configuration that may have changed since the
-repository was last updated.
+- Be read-only against the machine: no installs, upgrades,
+  `defaults write`, `brew bundle`, or edits outside the repository.
+- Follow `AGENTS.md` throughout.
+- Do not introduce a dotfiles framework, inventory system, sync
+  mechanism, or configuration-management platform.
+- Do not edit the repository until I approve the plan in Phase 3.
+- Leave changes uncommitted for my review.
 
-The goal is not to snapshot the machine. Persist only deliberate,
-reusable workstation configuration that belongs on a future Mac.
+## Phase 1: Understand the repository
 
-For software:
+Confirm the working tree is clean; if not, tell me and stop. Read
+`README.md`, `AGENTS.md`, `Brewfile`, `Makefile`, `scripts/`,
+`shell/`, `git/`, `python/`, `docs/` (especially
+`docs/manual-setup.md`), `knowledge/decisions/`, and the tests. Note
+what the repository owns, what it deliberately leaves manual, and how
+each kind of configuration is expressed.
 
-- Compare relevant installed Homebrew formulae, Homebrew casks, and
-  applications with the `Brewfile`.
-- Do not use `brew bundle dump`.
-- Do not add transitive dependencies or incidental/temporary tools.
-- Keep the `Brewfile` hand-curated.
-- Preserve the repository's existing ownership rules for Python,
-  Docker Desktop, and applications.
+## Phase 2: Inspect the machine
 
-For macOS preferences:
+Use read-only commands, for example `brew leaves`,
+`brew list --cask`, `mas list`, `ls /Applications ~/Applications`,
+`defaults read <domain> <key>` for keys the repository manages or my
+context mentions, and `git config --global --list` plus the live
+shell/Git/Python files compared against what the repository provides.
 
-- Consider only settings that are stable, intentional, useful to
-  restore, and appropriate for this repository.
-- Follow the existing `ensure_default` pattern in
-  `scripts/macos/defaults.sh`.
-- Document the inverse setting in the README.
-- Do not automate brittle, security-sensitive, privacy-sensitive, or
-  rarely changed preferences. Put those in `docs/manual-setup.md` when
-  appropriate.
-- Do not expand the current Finder/Dock restart policy without a
-  strong architectural reason.
+Compare in both directions: things on the machine the repository does
+not know about, and things the repository manages that are missing or
+no longer match. If something looks like a credential, note that it
+exists and do not reproduce its value.
 
-For shell, Git, Python, and manual configuration, follow the existing
-repository architecture rather than introducing a new mechanism.
+## Phase 3: Propose, then stop
 
-Before editing, show me the candidate changes you believe should be
-persisted and distinguish intentional configuration from incidental
-machine state.
+List every candidate change with the evidence, a classification, a
+proposed action (add, update, remove, document in
+`docs/manual-setup.md`, or ignore), and one line on why.
 
-For approved changes:
+- Intentional: I would want it on a fresh Mac; it is stable; it is a
+  leaf tool, not a dependency; it is a setting I chose on purpose.
+- Incidental: transitive dependencies, one-off or experimental tools,
+  caches, per-project tooling, installer side effects, ephemeral or
+  machine-specific values.
+- Unsure: default to excluding, and say what would resolve it.
 
-1. Make the smallest necessary repository edits.
-2. Update tests when the repository contract changes.
-3. Update documentation when user-visible behavior changes.
-4. Add an architecture decision only if an actual architectural
-   decision is being introduced.
-5. Run `make lint test`.
-6. Review the final diff for accidental machine-specific values,
-   secrets, destructive behavior, or unnecessary complexity.
+Then stop and wait for approval. If nothing should change, say so.
 
-Follow `AGENTS.md` throughout. Do not introduce a generic dotfiles
-framework, inventory system, synchronization mechanism, or
-configuration-management platform.
+## Phase 4: Apply approved changes
+
+- Keep the `Brewfile` hand-curated. Do not use `brew bundle dump` or
+  add transitive dependencies or temporary tools. Preserve the
+  existing ownership rules for Python, Docker Desktop, and
+  applications.
+- Automate only macOS preferences that are stable, intentional, and
+  useful to restore, using the `ensure_default` pattern in
+  `scripts/macos/defaults.sh`, with the inverse documented in the
+  README. Brittle, security- or privacy-sensitive, or rarely changed
+  preferences go in `docs/manual-setup.md`. Do not expand the
+  Finder/Dock restart policy without a strong architectural reason.
+- For shell, Git, Python, and manual configuration, follow the
+  existing architecture rather than adding a mechanism.
+
+For each change: make the smallest edits that express it; update
+tests when the contract changes and docs when user-visible behavior
+changes; add an architecture decision only for a genuine architectural
+decision; run `make lint test` and fix failures within scope.
+
+## Phase 5: Review and report
+
+Check the diff for machine-specific values (username, hostname, home
+paths, serial numbers), secrets, destructive behavior, and unnecessary
+complexity. Then report what changed by file, what you saw but
+deliberately did not persist and why, and anything that still needs a
+decision from me.
 ```
