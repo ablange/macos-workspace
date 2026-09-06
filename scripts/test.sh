@@ -53,6 +53,7 @@ required_files=(
   scripts/macos/defaults.sh
   knowledge/decisions/0004-macos-defaults-policy.md
   docs/manual-setup.md
+  docs/prompts/maintain-workspace.md
   knowledge/decisions/0005-bootstrap-composition.md
   .github/workflows/ci.yml
 )
