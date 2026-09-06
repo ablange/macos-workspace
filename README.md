@@ -188,7 +188,7 @@ The repository is meant to change as the machine changes. Edit the source of tru
 
 The workflow is: change the machine or the desired configuration → update the repository → run `make lint test` → review the diff → commit.
 
-Coding agents can help inspect the machine, update the repository, run the tests, and review diffs. [AGENTS.md](AGENTS.md) gives them the same rules maintainers follow.
+Coding agents can help inspect the machine, update the repository, run the tests, and review diffs. [AGENTS.md](AGENTS.md) gives them the same rules maintainers follow. For a maintenance pass, give a coding agent [docs/prompts/maintain-workspace.md](docs/prompts/maintain-workspace.md).
 
 
 ## Risks
